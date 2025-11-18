@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KNN – Explainable Flower Classifier</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="knn_explainer.css">
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <h1 class="app-title">Explainable KNN – Flower Classifier</h1>
+    <p class="app-subtitle">
+      Follow each step to see exactly how the chatbot decides which flower species
+      the inserted data point most likely belongs to.
+    </p>
+  </header>
+
+  <!-- STEPPER + GLOBAL CONTROLS -->
+  <section class="top-bar">
+    <nav class="stepper" aria-label="KNN steps">
+      <button class="step-pill active" data-step="1">1. Overview</button>
+      <button class="step-pill" data-step="2">2. Euclidean</button>
+      <button class="step-pill" data-step="3">3. Manhattan</button>
+      <button class="step-pill" data-step="4">4. Minkowski</button>
+      <button class="step-pill" data-step="5">5. Majority vote</button>
+    </nav>
+
+    <div class="global-controls">
+      <div class="control-group">
+        <label for="kSlider">k (number of neighbours)</label>
+        <div class="control-row">
+          <input id="kSlider" type="range" min="1" max="9" step="2" value="5">
+          <span id="kValue" class="badge">k = 5</span>
+        </div>
+        <p class="hint">
+          We use small odd values of k (≤ 9) so it’s easy to see which neighbours are chosen
+          and to avoid ties when voting.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN LAYOUT -->
+  <main class="layout">
+
+    <!-- LEFT: EXPLANATIONS -->
+    <section class="left-panel">
+
+      <!-- STEP 1: OVERVIEW -->
+      <section class="step step-1 active" aria-labelledby="step1-title">
+        <h2 id="step1-title">Step 1 – What KNN is doing</h2>
+        <p>
+          Our flower chatbot has been shown a set of <strong>labelled examples</strong>.
+          Each point on the chart is a flower with measured features
+          (for example petal length and petal width) and a known species:
+        </p>
+        <ul>
+          <li><span class="dot dot-setosa"></span> <strong>Blue</strong> points – Setosa</li>
+          <li><span class="dot dot-versicolor"></span> <strong>Red</strong> points – Versicolor</li>
+          <li><span class="dot dot-virginica"></span> <strong>Green</strong> points – Virginica</li>
+        </ul>
+        <p>
+          The <span class="highlight">pink star</span> is a <strong>new flower</strong>
+          the chatbot has never seen before. It doesn’t know the species yet.
+        </p>
+        <p>
+          The K-Nearest Neighbours (KNN) algorithm makes a prediction by:
+        </p>
+        <ol>
+          <li>Measuring the <strong>distance</strong> from the star to every known flower.</li>
+          <li>Sorting all flowers from closest to furthest.</li>
+          <li>Taking the closest <strong>k</strong> neighbours.</li>
+          <li>Letting those neighbours <strong>vote</strong> for the most likely species.</li>
+        </ol>
+        <p>
+          In the next steps, we will look at different ways of measuring distance and how they
+          influence which neighbours are selected and, ultimately, which flower species
+          the chatbot predicts.
+        </p>
+      </section>
+
+      <!-- STEP 2: EUCLIDEAN -->
+      <section class="step step-2" aria-labelledby="step2-title">
+        <h2 id="step2-title">Step 2 – Euclidean distance (straight-line)</h2>
+        <p>
+          Euclidean distance is the ordinary straight-line distance between two points.
+          In 2D, between the star <code>(x★, y★)</code> and a flower <code>(x, y)</code>:
+        </p>
+        <p class="formula">
+          d<sub>E</sub> = √[(x − x★)² + (y − y★)²]
+        </p>
+        <p>
+          You can imagine placing a ruler between the star and each flower: the Euclidean
+          distance is the length of that ruler. On the plot, the flowers outlined with a
+          <span class="euclid-ring">dark green ring</span> are the current
+          <strong>k nearest neighbours under Euclidean distance</strong>.
+        </p>
+
+        <h3 class="table-heading">Euclidean distances to each flower</h3>
+        <p class="hint">
+          Rows are sorted from closest to furthest. Highlighted rows show the current
+          k nearest neighbours.
+        </p>
+        <div class="table-wrap">
+          <table class="dist-table" id="table-euclidean">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Class</th>
+                <th>x</th>
+                <th>y</th>
+                <th>Δx</th>
+                <th>Δy</th>
+                <th>d<sub>E</sub></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- STEP 3: MANHATTAN -->
+      <section class="step step-3" aria-labelledby="step3-title">
+        <h2 id="step3-title">Step 3 – Manhattan distance (grid-like)</h2>
+        <p>
+          Manhattan distance only allows us to move <strong>horizontally or vertically</strong>,
+          like walking through city blocks. Between the star and a flower:
+        </p>
+        <p class="formula">
+          d<sub>M</sub> = |x − x★| + |y − y★|
+        </p>
+        <p>
+          We first move sideways, then up or down. The total path length is the
+          Manhattan distance. This can favour points that line up with the star on
+          the same row or column. On the plot, the flowers outlined with an
+          <span class="manhattan-ring">orange ring</span> are the
+          <strong>k nearest neighbours under Manhattan distance</strong>.
+        </p>
+        <p>
+          Comparing Euclidean and Manhattan helps students see that the notion of
+          “closest” depends on how we measure distance.
+        </p>
+
+        <h3 class="table-heading">Manhattan distances to each flower</h3>
+        <p class="hint">
+          Again, rows are sorted from closest to furthest. Highlighted rows show the
+          k neighbours chosen by Manhattan distance.
+        </p>
+        <div class="table-wrap">
+          <table class="dist-table" id="table-manhattan">
+            <thead>
+            <tr>
+              <th>#</th>
+              <th>Class</th>
+              <th>x</th>
+              <th>y</th>
+              <th>|Δx|</th>
+              <th>|Δy|</th>
+              <th>d<sub>M</sub></th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- STEP 4: MINKOWSKI -->
+      <section class="step step-4" aria-labelledby="step4-title">
+        <h2 id="step4-title">Step 4 – Minkowski distance (a whole family of distances)</h2>
+        <p>
+          Minkowski distance is a <strong>general formula</strong> that includes Euclidean
+          and Manhattan as special cases. It introduces a parameter <code>p ≥ 1</code>
+          which controls how strongly we penalise large differences in individual features.
+        </p>
+        <p class="formula">
+          d<sub>p</sub> = ( |x − x★|<sup>p</sup> + |y − y★|<sup>p</sup> )<sup>1/p</sup>
+        </p>
+        <ul>
+          <li>When <strong>p = 1</strong>, this becomes <strong>Manhattan distance</strong>.</li>
+          <li>When <strong>p = 2</strong>, this becomes <strong>Euclidean distance</strong>.</li>
+        </ul>
+        <p>
+          As <strong>p increases</strong>, points with one very different feature are pushed
+          further away. As <strong>p approaches 1</strong>, the distance behaves more like the
+          grid-based Manhattan distance. This gives us a way to tune how sensitive the chatbot
+          is to large differences in a single feature (for example, petal length).
+        </p>
+
+        <div class="control-group">
+          <label for="pSlider">Minkowski order p</label>
+          <div class="control-row">
+            <input id="pSlider" type="range" min="1" max="3" step="0.1" value="2">
+            <span id="pValue" class="badge">p = 2.0</span>
+          </div>
+          <p class="hint">
+            Slide p to see how the distances and selected neighbours change.
+            On the plot, a <span class="mink-ring">purple ring</span> marks the
+            k nearest neighbours under Minkowski distance.
+          </p>
+        </div>
+
+        <h3 class="table-heading">Minkowski distances for the current value of p</h3>
+        <p class="hint">
+          When p = 2 you should see the same ranking as Euclidean. When p = 1 you should
+          see the same ranking as Manhattan. Values in between smoothly blend the two.
+        </p>
+        <div class="table-wrap">
+          <table class="dist-table" id="table-minkowski">
+            <thead>
+            <tr>
+              <th>#</th>
+              <th>Class</th>
+              <th>x</th>
+              <th>y</th>
+              <th>d<sub>p</sub></th>
+              <th>Nearest?</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- STEP 5: MAJORITY VOTE -->
+      <section class="step step-5" aria-labelledby="step5-title">
+        <h2 id="step5-title">Step 5 – Majority vote &amp; final decision</h2>
+        <p>
+          Now that we know how to measure distance, KNN uses a very simple but powerful
+          idea to decide the flower species:
+        </p>
+        <ol>
+          <li>Take the <strong>k nearest neighbours</strong> under the chosen distance.</li>
+          <li>Count how many neighbours belong to each species.</li>
+          <li>The species with the <strong>most neighbours</strong> “wins” the vote.</li>
+        </ol>
+        <p>
+          Below you can see how the vote would look under each distance measure.
+          This makes the chatbot’s behaviour <strong>transparent</strong>: the user can
+          see exactly which examples influenced the final prediction.
+        </p>
+
+        <div id="voteSummary" class="decision-summary">
+          <!-- Filled by JavaScript -->
+        </div>
+      </section>
+
+      <!-- NAV BUTTONS -->
+      <div class="step-nav">
+        <button id="prevStep" class="btn-secondary" type="button">← Previous</button>
+        <button id="nextStep" class="btn-primary" type="button">Next →</button>
+      </div>
+    </section>
+
+    <!-- RIGHT: VISUAL SCATTER PLOT -->
+    <section class="right-panel">
+      <div class="card plot-card">
+        <div class="plot-header">
+          <h2 class="plot-title">Flower feature space</h2>
+          <p class="plot-caption">
+            The pink star is the new flower. Different coloured rings show the k nearest
+            neighbours under each distance measure.
+          </p>
+        </div>
+
+        <div class="plot" id="plot">
+          <!-- star -->
+          <div class="star" id="queryPoint" style="left:60%; top:50%;">★</div>
+
+          <!-- Setosa (blue) -->
+          <div class="point setosa" data-class="Setosa" data-x="20" data-y="75" style="left:20%; top:75%;"></div>
+          <div class="point setosa" data-class="Setosa" data-x="30" data-y="78" style="left:30%; top:78%;"></div>
+          <div class="point setosa" data-class="Setosa" data-x="25" data-y="70" style="left:25%; top:70%;"></div>
+          <div class="point setosa" data-class="Setosa" data-x="35" data-y="72" style="left:35%; top:72%;"></div>
+          <div class="point setosa" data-class="Setosa" data-x="40" data-y="80" style="left:40%; top:80%;"></div>
+
+          <!-- Versicolor (red) -->
+          <div class="point versicolor" data-class="Versicolor" data-x="65" data-y="55" style="left:65%; top:55%;"></div>
+          <div class="point versicolor" data-class="Versicolor" data-x="70" data-y="52" style="left:70%; top:52%;"></div>
+          <div class="point versicolor" data-class="Versicolor" data-x="75" data-y="50" style="left:75%; top:50%;"></div>
+          <div class="point versicolor" data-class="Versicolor" data-x="80" data-y="48" style="left:80%; top:48%;"></div>
+          <div class="point versicolor" data-class="Versicolor" data-x="85" data-y="46" style="left:85%; top:46%;"></div>
+
+          <!-- Virginica (green) -->
+          <div class="point virginica" data-class="Virginica" data-x="35" data-y="25" style="left:35%; top:25%;"></div>
+          <div class="point virginica" data-class="Virginica" data-x="40" data-y="20" style="left:40%; top:20%;"></div>
+          <div class="point virginica" data-class="Virginica" data-x="45" data-y="22" style="left:45%; top:22%;"></div>
+          <div class="point virginica" data-class="Virginica" data-x="50" data-y="18" style="left:50%; top:18%;"></div>
+          <div class="point virginica" data-class="Virginica" data-x="55" data-y="24" style="left:55%; top:24%;"></div>
+
+          <!-- Legend -->
+          <div class="legend">
+            <div><span class="dot dot-setosa"></span> Setosa</div>
+            <div><span class="dot dot-versicolor"></span> Versicolor</div>
+            <div><span class="dot dot-virginica"></span> Virginica</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- JS: distances + step navigation -->
+<script>
+  const query = { x: 60, y: 50 }; // same scale as CSS percentages
+
+  const points = Array.from(document.querySelectorAll('.point')).map((el, idx) => ({
+    id: idx + 1,
+    el,
+    x: parseFloat(el.dataset.x),
+    y: parseFloat(el.dataset.y),
+    cls: el.dataset.class
+  }));
+
+  const kSlider = document.getElementById('kSlider');
+  const kValueSpan = document.getElementById('kValue');
+  const pSlider = document.getElementById('pSlider');
+  const pValueSpan = document.getElementById('pValue');
+
+  function getK() {
+    let k = parseInt(kSlider.value, 10);
+    if (k % 2 === 0) k += 1;
+    if (k > 9) k = 9;
+    return k;
+  }
+
+  function euclideanDist(pt) {
+    const dx = pt.x - query.x;
+    const dy = pt.y - query.y;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+
+  function manhattanDist(pt) {
+    const dx = Math.abs(pt.x - query.x);
+    const dy = Math.abs(pt.y - query.y);
+    return dx + dy;
+  }
+
+  function minkowskiDist(pt, p) {
+    const dx = Math.abs(pt.x - query.x);
+    const dy = Math.abs(pt.y - query.y);
+    const sum = Math.pow(dx, p) + Math.pow(dy, p);
+    return Math.pow(sum, 1/p);
+  }
+
+  function resetHighlights() {
+    points.forEach(p => p.el.classList.remove('nearest-euclidean','nearest-manhattan','nearest-minkowski'));
+  }
+
+  function fillEuclideanTable() {
+    const tbody = document.querySelector('#table-euclidean tbody');
+    tbody.innerHTML = '';
+    const k = getK();
+    const sorted = [...points].map(p => ({
+      ...p,
+      dx: p.x - query.x,
+      dy: p.y - query.y,
+      d: euclideanDist(p)
+    })).sort((a,b) => a.d - b.d);
+
+    sorted.forEach((p, i) => {
+      const tr = document.createElement('tr');
+      if (i < k) tr.classList.add('highlight');
+      tr.innerHTML = `
+        <td>${p.id}</td>
+        <td>${p.cls}</td>
+        <td>${p.x.toFixed(1)}</td>
+        <td>${p.y.toFixed(1)}</td>
+        <td>${p.dx.toFixed(1)}</td>
+        <td>${p.dy.toFixed(1)}</td>
+        <td>${p.d.toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    sorted.slice(0, k).forEach(p => p.el.classList.add('nearest-euclidean'));
+    return { sorted, nearest: sorted.slice(0, k) };
+  }
+
+  function fillManhattanTable() {
+    const tbody = document.querySelector('#table-manhattan tbody');
+    tbody.innerHTML = '';
+    const k = getK();
+    const sorted = [...points].map(p => {
+      const dx = Math.abs(p.x - query.x);
+      const dy = Math.abs(p.y - query.y);
+      return { ...p, dx, dy, d: dx + dy };
+    }).sort((a,b) => a.d - b.d);
+
+    sorted.forEach((p, i) => {
+      const tr = document.createElement('tr');
+      if (i < k) tr.classList.add('highlight');
+      tr.innerHTML = `
+        <td>${p.id}</td>
+        <td>${p.cls}</td>
+        <td>${p.x.toFixed(1)}</td>
+        <td>${p.y.toFixed(1)}</td>
+        <td>${p.dx.toFixed(1)}</td>
+        <td>${p.dy.toFixed(1)}</td>
+        <td>${p.d.toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    sorted.slice(0, k).forEach(p => p.el.classList.add('nearest-manhattan'));
+    return { sorted, nearest: sorted.slice(0, k) };
+  }
+
+  function fillMinkowskiTable() {
+    const tbody = document.querySelector('#table-minkowski tbody');
+    tbody.innerHTML = '';
+    const k = getK();
+    const p = parseFloat(pSlider.value);
+    const sorted = [...points].map(pt => ({
+      ...pt,
+      d: minkowskiDist(pt, p)
+    })).sort((a,b) => a.d - b.d);
+
+    sorted.forEach((p, i) => {
+      const tr = document.createElement('tr');
+      if (i < k) tr.classList.add('highlight');
+      tr.innerHTML = `
+        <td>${p.id}</td>
+        <td>${p.cls}</td>
+        <td>${p.x.toFixed(1)}</td>
+        <td>${p.y.toFixed(1)}</td>
+        <td>${p.d.toFixed(2)}</td>
+        <td>${i < k ? '✔' : ''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    sorted.slice(0, k).forEach(p => p.el.classList.add('nearest-minkowski'));
+    return { sorted, nearest: sorted.slice(0, k) };
+  }
+
+  function countVotes(nearest) {
+    const counts = {};
+    nearest.forEach(p => {
+      counts[p.cls] = (counts[p.cls] || 0) + 1;
+    });
+    const entries = Object.entries(counts);
+    if (!entries.length) return { counts, winner: null, max: 0, ties: [] };
+
+    entries.sort((a,b) => b[1] - a[1]);
+    const max = entries[0][1];
+    const tied = entries.filter(([_, c]) => c === max).map(([cls]) => cls);
+    return {
+      counts,
+      winner: tied.length === 1 ? tied[0] : null,
+      max,
+      ties: tied
+    };
+  }
+
+  function renderVoteBlock(title, colorClass, result, kVal) {
+    const entries = Object.entries(result.counts);
+    const list = entries.length
+      ? '<ul>' + entries.map(([cls, c]) =>
+          `<li><strong>${cls}</strong>: ${c} neighbour${c !== 1 ? 's' : ''}</li>`).join('') +
+        '</ul>'
+      : '<p>No neighbours found.</p>';
+
+    let conclusion;
+    if (!entries.length) {
+      conclusion = 'No vote is possible.';
+    } else if (result.winner) {
+      conclusion = `The majority of the ${kVal} nearest neighbours are <strong>${result.winner}</strong>.`;
+    } else {
+      conclusion = `There is a <strong>tie</strong> between: <strong>${result.ties.join(', ')}</strong>. KNN would need a tie-breaking rule (for example, smaller k or a secondary metric).`;
+    }
+
+    return `
+      <div class="metric-card ${colorClass}">
+        <h4>${title}</h4>
+        ${list}
+        <p class="metric-conclusion">${conclusion}</p>
+      </div>
+    `;
+  }
+
+  function updateVoteSummary(eNearest, mNearest, mkNearest) {
+    const kVal = getK();
+    const eRes = countVotes(eNearest);
+    const mRes = countVotes(mNearest);
+    const mkRes = countVotes(mkNearest);
+
+    const summaryEl = document.getElementById('voteSummary');
+    summaryEl.innerHTML =
+      '<div class="metric-grid">' +
+        renderVoteBlock('Euclidean distance (straight-line)', 'metric-euclid', eRes, kVal) +
+        renderVoteBlock('Manhattan distance (grid)', 'metric-manhattan', mRes, kVal) +
+        renderVoteBlock('Minkowski distance (p-th order)', 'metric-minkowski', mkRes, kVal) +
+      '</div>' +
+      `<p class="overall-note">
+        In this demo the chatbot uses <strong>Minkowski distance</strong> with the current
+        value of p as its main decision rule. This means the final prediction is taken from
+        the Minkowski column. Showing all three side by side helps learners see that
+        different distance choices can sometimes lead to different, but still explainable,
+        decisions.
+      </p>`;
+  }
+
+  function recomputeAll() {
+    resetHighlights();
+    const e = fillEuclideanTable();
+    const m = fillManhattanTable();
+    const mk = fillMinkowskiTable();
+    updateVoteSummary(e.nearest, m.nearest, mk.nearest);
+  }
+
+  // INITIALISE
+  kValueSpan.textContent = `k = ${getK()}`;
+  if (pSlider && pValueSpan) {
+    pValueSpan.textContent = `p = ${parseFloat(pSlider.value).toFixed(1)}`;
+  }
+  recomputeAll();
+
+  kSlider.addEventListener('input', () => {
+    kValueSpan.textContent = `k = ${getK()}`;
+    recomputeAll();
+  });
+
+  if (pSlider) {
+    pSlider.addEventListener('input', () => {
+      pValueSpan.textContent = `p = ${parseFloat(pSlider.value).toFixed(1)}`;
+      recomputeAll();
+    });
+  }
+
+  // STEP NAVIGATION
+  const stepButtons = Array.from(document.querySelectorAll('.step-pill'));
+  const steps = Array.from(document.querySelectorAll('.step'));
+  const prevBtn = document.getElementById('prevStep');
+  const nextBtn = document.getElementById('nextStep');
+  let currentStep = 1;
+
+  function showStep(n) {
+    currentStep = n;
+    steps.forEach((s, i) => {
+      s.classList.toggle('active', i === n - 1);
+    });
+    stepButtons.forEach((b, i) => {
+      b.classList.toggle('active', i === n - 1);
+    });
+    prevBtn.disabled = n === 1;
+    nextBtn.textContent = n === steps.length ? 'Finish' : 'Next →';
+  }
+
+  stepButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const n = parseInt(btn.dataset.step, 10);
+      showStep(n);
+    });
+  });
+
+  prevBtn.addEventListener('click', () => {
+    if (currentStep > 1) showStep(currentStep - 1);
+  });
+
+  nextBtn.addEventListener('click', () => {
+    if (currentStep < steps.length) {
+      showStep(currentStep + 1);
+    } else {
+      showStep(1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+</script>
+</body>
+</html>
