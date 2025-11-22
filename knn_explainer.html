@@ -380,6 +380,7 @@
             <thead>
               <tr>
                 <th>#</th>
+                <th>Id</th>
                 <th>Class</th>
                 <th>x</th>
                 <th>y</th>
@@ -739,7 +740,7 @@
           'Manhattan distance adds up absolute differences along each feature dimension.';
       } else if (value === 'minkowski') {
         metricDescription.textContent =
-          'Minkowski distance is a general formula that behaves like Manhattan for p = 1 and Euclidean for p = 2. Use the slider below to change p.';
+          'Minkowski distance is a general formula that behaves like Manhattan for p = 1 and Euclidean for p = 2.';
       }
       updateSettingsSummary();
       syncDistanceTabs(value);
@@ -1257,15 +1258,18 @@
         }
 
         rowsHtml += `
-          <tr class="${rowClass}">
-            <td>${idx + 1}</td>
-            <td>${escapeHtml(point.label)}</td>
-            <td>${point.x.toFixed(2)}</td>
-            <td>${point.y.toFixed(2)}</td>
-            <td>${dx.toFixed(2)}</td>
-            <td>${dy.toFixed(2)}</td>
-            <td>${d.toFixed(2)}</td>
+        <tr class="${rowClass}">
+          <td>${idx + 1}</td>              
+          <td>${point.id}</td>             
+          <td>${escapeHtml(point.label)}</td>
+          <td>${point.x.toFixed(2)}</td>
+          <td>${point.y.toFixed(2)}</td>
+          <td>${dx.toFixed(2)}</td>
+          <td>${dy.toFixed(2)}</td>
+          <td>${d.toFixed(2)}</td>
           </tr>
+
+
         `;
       });
 

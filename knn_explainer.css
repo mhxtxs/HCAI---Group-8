@@ -714,9 +714,9 @@ input[type="range"]::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: #22c55e;
-  border: 2px solid #bbf7d0;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25);
+  background: var(--accent-gold);              
+  border: 2px solid #fef9c3;                   
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.25); 
   cursor: pointer;
 }
 
@@ -724,11 +724,54 @@ input[type="range"]::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: #22c55e;
-  border: 2px solid #bbf7d0;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25);
+  background: var(--accent-gold);              
+  border: 2px solid #fef9c3;
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.25);
   cursor: pointer;
 }
+
+
+select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 999px; 
+  border: 2px solid #020617; 
+  background:
+    radial-gradient(circle at top left,
+      rgba(20, 184, 166, 0.30),
+      #020617 60%);
+  color: var(--text-main);
+  font-size: 0.95rem;
+
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  box-shadow:
+  0 0 0 1px #020617,
+    0 0 18px rgba(20, 184, 166, 0.55); /
+}
+
+
+select option {
+  background-color: #020617;
+  color: var(--text-main);
+}
+
+
+select option:hover,
+select option:checked,
+select option:focus {
+  background-color: #111827 !important; /
+  color: var(--text-main) !important;
+}
+
+select option:disabled {
+  background-color: #020617;
+  color: rgba(148, 163, 184, 0.85);
+}
+
 
 .param-radio-row {
   display: flex;
