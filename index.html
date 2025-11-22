@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>KNN Flower Classifier – Explainable Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+  <main class="app-root">
+    <header class="hero">
+  <div class="hero-text">
+    <h1 class="hero-title">FlowerLens</h1>
+    <p class="hero-subtitle">
+      FlowerLens is built on the K-Nearest Neighbours (KNN) algorithm. With our tool you can
+      transparently see how the algorithm works. Take a picture of a flower,
+      upload it, and FlowerLens will show you which flowers in the training data are most similar.
+    </p>
+
+    <ul class="hero-list">
+      <li>Upload your own flower image and receive the name of the flower.</li>
+      <li>Inspect the training dataset, add or remove images, and click individual data points.</li>
+      <li>Adjust KNN parameters and see in a transparent way how they change the result.</li>
+    </ul>
+  </div>
+
+  <div class="hero-image">
+    <div class="hero-image-main">
+      <img
+        src="flower_tool.png"
+        alt="Taking a photo of a flower with a smartphone"
+      />
+    </div>
+  </div>
+</header>
+
+
+
+
+
+
+    <!-- TRAINING DATA -->
+    <section class="view-toggle">
+      <button class="view-tab active" data-target="view-assistant">
+        Ask FlowerLens
+      </button>
+      <button class="view-tab" data-target="view-dataset">
+        Model training data & Explanation of the algorithm
+      </button>
+    </section>
+
+    <!-- CHAT  -->
+    <section id="view-assistant" class="app-view active">
+      <section class="main-area">
+        <!-- CHAT PANEL -->
+        <section class="chat-panel">
+          <div class="chat-header">
+            <h2>Ask FlowerLens</h2>
+          </div>
+
+          <!-- compact KNN settings summary in the chat -->
+          <div class="settings-summary" id="settings-summary">
+            <span class="summary-label">Current KNN settings</span>
+            <span class="summary-value" id="summary-k">k = 5</span>
+            <span class="summary-dot">·</span>
+            <span class="summary-value" id="summary-metric">Metric: Euclidean</span>
+          </div>
+
+          <div class="chat-window" id="chat-window">
+            <div class="chat-message bot">
+              <div class="chat-bubble">
+                Hi! Upload a flower image and I'll tell you what kind of flower it is.
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-row">
+            <button
+              id="chat-upload-btn"
+              class="btn-upload highlighted-upload"
+              title="Upload a flower image"
+            >
+              <span class="upload-icon">📷</span>
+              <span class="upload-label">Upload flower image</span>
+            </button>
+            <input
+              type="text"
+              id="chat-input"
+              class="chat-input"
+              placeholder="Ask me something"
+            />
+            <button id="chat-send" class="btn-primary">Send</button>
+            <!-- hidden file input for chat upload -->
+            <input type="file" id="file-input" accept="image/*" hidden />
+          </div>
+
+          <p class="chat-hint">
+            First upload a photo of a flower, then ask questions about the prediction.
+          </p>
+        </section>
+
+        <!-- SIDE PANEL: SETTINGS + EXPLANATIONS -->
+        <aside class="side-panel">
+          <!-- PARAMETERS -->
+          <section class="side-card">
+            <h2 class="side-title">Settings for the K-Nearest Neighbours (KNN) Algorithm</h2>
+
+            <div class="param-group">
+              <label for="k-slider">
+                Number of neighbours <span class="badge" id="k-value">5</span>
+              </label>
+              <input
+                id="k-slider"
+                type="range"
+                min="1"
+                max="25"
+                step="1"
+                value="5"
+              />
+              <p class="param-help">
+                <strong>k</strong> controls how many neighbours vote for the class.
+                Small <strong>k</strong> → sensitive to noise; large <strong>k</strong> → smoother,
+                but may ignore fine details.
+              </p>
+            </div>
+
+            <div class="param-group">
+              <label for="metric-select">
+                Distance metric
+              </label>
+              <select id="metric-select">
+                <option value="euclidean">Euclidean distance</option>
+                <option value="manhattan">Manhattan distance</option>
+                <option value="minkowski">Minkowski distance (p-th order)</option>
+              </select>
+              <p class="param-help" id="metric-description">
+                Euclidean distance measures straight-line distance in feature space, like a ruler.
+              </p>
+            </div>
+
+            <p class="param-note">
+              Changes here control how the model searches for neighbours.
+              The prediction in the chat will always use the current setup.
+            </p>
+          </section>
+
+          
+  
+             
+        </aside>
+      </section>
+    </section>
+
+    <!-- VIEW: TRAINING DATA -->
+    <section id="view-dataset" class="app-view">
+      <section class="dataset-intro-card">
+        <h2>Training data used by the KNN model</h2>
+
+        <!-- second KNN settings summary on dataset page -->
+        <div class="settings-summary settings-summary-compact">
+          <span class="summary-label">Current KNN settings</span>
+          <span class="summary-value" id="summary-k-2">k = 5</span>
+          <span class="summary-dot">·</span>
+          <span class="summary-value" id="summary-metric-2">Metric: Euclidean</span>
+        </div>
+
+        <p>
+          These are the flowers that the model uses as neighbours.
+          Whenever you upload a new image, the classifier compares it to this dataset.
+        </p>
+        <ul>
+          <li>Each row and dot represents one flower in the training set.</li>
+          <li>You can filter by class, inspect individual points, and see their feature values.</li>
+          <li>You can also add or remove images to understand how the training data shapes the prediction.</li>
+        </ul>
+        <p class="param-note">
+          Think of this page as the <strong>memory</strong> of the model.
+          Editing the dataset changes what the KNN algorithm can remember and use as neighbours.
+        </p>
+      </section>
+
+      <section class="dataset-area">
+        <article class="plot-card">
+          <h2>Dataset in feature space</h2>
+          <p class="plot-caption">
+            Each dot represents one flower from the training dataset.
+            Click a dot to see detailed information. The uploaded flower is shown as a turquoise star;
+            its k nearest neighbours are highlighted with coloured rings.
+          </p>
+          <div id="dataset-scatter" class="plot"></div>
+          <p class="plot-legend-note">
+            <strong>Legend:</strong> coloured dots = training flowers (by class),
+            turquoise star = uploaded flower, 
+            gold ring = current k nearest neighbours
+          </p>
+        </article>
+
+        <article class="plot-card">
+          <h2>Dataset explorer</h2>
+          <p class="plot-caption">
+            Inspect, add, or remove images from the training dataset to see how the model changes.
+          </p>
+
+          <div class="dataset-controls">
+            <div class="filter-group">
+              <label for="class-filter">Filter by class:</label>
+              <select id="class-filter">
+                <option value="all">All classes</option>
+                <option value="setosa">Setosa</option>
+                <option value="versicolor">Versicolor</option>
+                <option value="virginica">Virginica</option>
+              </select>
+            </div>
+
+            <div class="dataset-buttons">
+              <button class="btn-secondary" id="btn-add-image">Add new image</button>
+              <button class="btn-secondary" id="btn-remove-image" disabled>Remove selected image</button>
+            </div>
+          </div>
+
+          <!-- hidden file input for adding dataset images -->
+          <input type="file" id="dataset-file-input" accept="image/*" hidden />
+
+          <div class="table-wrap">
+            <table class="data-table" id="dataset-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Id</th>
+                  <th>Class</th>
+                  <th>Source</th>
+                  <th>In training</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <p class="note">
+            Clicking a row also selects the corresponding point in the scatter plot and shows its details below.
+          </p>
+
+          <div id="point-details" class="point-details">
+            <p>No point selected yet. Click a dot in the plot or a row in the table.</p>
+          </div>
+        </article>
+      </section>
+
+            <!-- DISTANCE EXPLANATION CARD -->
+      <section class="distance-card" id="distance-explanation">
+        <h2>Distance measures, neighbour selection and class vote</h2>
+        <p>
+          To decide which flowers are “closest” to the uploaded image, the model measures the distance
+          between the star representing the uploaded flower and every flower in the dataset. Different
+          distance formulas lead to slightly different notions of what “close” means.
+        </p>
+
+        <!-- Tabs for the three distance methods -->
+        <div class="stepper distance-stepper">
+          <button class="step-pill distance-tab active" data-metric="euclidean">
+            Euclidean distance
+          </button>
+          <button class="step-pill distance-tab" data-metric="manhattan">
+            Manhattan distance
+          </button>
+          <button class="step-pill distance-tab" data-metric="minkowski">
+            Minkowski distance
+          </button>
+        </div>
+
+
+        <!-- Euclidean explanation -->
+        <div class="distance-panel exp-panel active" data-metric-panel="euclidean">
+          <h3>Euclidean distance (straight-line)</h3>
+          <p>
+            Euclidean distance is the ordinary straight-line distance between two points.
+            In 2D, between the star <em>(x★, y★)</em> and a flower <em>(x, y)</em>:
+          </p>
+          <div class="formula-box">
+            d<sub>E</sub> = √[(x − x★)² + (y − y★)²]
+          </div>
+          <p>
+            You can imagine placing a ruler between the star and each flower: the Euclidean distance is
+            the length of that ruler. On the plot, the flowers outlined with a thick golden ring are the current
+            <strong> k nearest neighbours under Euclidean distance. </strong>
+          </p>
+
+          <h4> Euclidean distances to each flower</h4>
+          <p> Rows are sorted from the closest to furthest. Highlighted rows show the current k nearest neighbours.</p>
+        </div>
+
+        <!-- Manhattan explanation -->
+        <div class="distance-panel exp-panel" data-metric-panel="manhattan">
+          <h3>Manhattan distance (grid-like)</h3>
+          <p>
+            Manhattan distance only allows us to move <strong>horizontally or vertically </strong>, like walking through
+            city blocks. Between the star <em>(x★, y★)</em> and a flower <em>(x, y)</em>:
+          </p>
+          <div class="formula-box">
+            d<sub>M</sub> = |x − x★| + |y − y★|
+          </div>
+          <p>
+            We first move sideways, then up or down. The total path length is the Manhattan distance.
+            This can favour points that line up with the star on the same row or column. On the plot, the flowers outlined with an golden righ are the <strong> k nearest neighbours under Manhattan distance </strong>
+          </p>
+          <h4> Manhattan distances to each flower</h4>
+          <p> Again, rows are sorted from closest to furthest. Highlighted rows show the k neighbours chosen by Manhattan distance.</p>
+        </div>
+
+        <!-- Minkowski explanation -->
+        <div class="distance-panel exp-panel" data-metric-panel="minkowski">
+          <h3>Minkowski distance (p-th order)</h3>
+          <p>
+            Minkowski distance is a <strong> general formula </strong> that includes Euclidean and Manhattan as special
+            cases. It introduces a parameter <em>p ≥ 1</em> that controls how strongly large differences
+            in individual features are penalised:
+          </p>
+          <div class="formula-box">
+            d<sub>p</sub> = ( |x − x★|<sup>p</sup> + |y − y★|<sup>p</sup> )<sup>1/p</sup>
+          </div>
+          <ul>
+            <li>When <strong>p = 1</strong>, this becomes Manhattan distance.</li>
+            <li>When <strong>p = 2</strong>, this becomes Euclidean distance.</li>
+          </ul>
+          <p>
+            As <strong> p increases </strong>, points with one very different feature are pushed further away. As <strong> p increases </strong>, points with one different feature are pushed further away.
+            As <strong> p approaches 1  </strong>, the distance behaves more like the grid-based Manhattan distance. This gives us a way to tune how sensitive the chatbot is to large differences in a single feature (for example petal length).
+            Values between 1 and 2 smoothly blend the grid-like Manhattan behaviour with the
+            straight-line Euclidean behaviour.
+          </p>
+
+          <div class="minkowski-row">
+            <label for="p-slider">Minkowski order p</label>
+            <div class="p-slider-wrap">
+              <input
+                type="range"
+                id="p-slider"
+                min="1"
+                max="5"
+                step="0.1"
+                value="2"
+              />
+              <span id="p-value">p = 2.0</span>
+            </div>
+            <p class="param-help">
+              Slide p to see how the distances and selected neighbours change. On the plot, a purple ring marks the k nearest neighbours under Minkowski distance. 
+            </p>
+
+            <!-- Distances table explanation -->
+        <h3>Minkowski distances for the current value of p</h3>
+        <p>
+          When you choose <strong>Minkowski distance</strong>
+          (<span id="current-distance-name">Euclidean distance</span> in the slider)
+          the model blends between Euclidean and Manhattan:
+        </p>
+        <ul>
+          <li>When <strong>p = 2</strong>, the ranking is the same as Euclidean distance.</li>
+          <li>When <strong>p = 1</strong>, the ranking is the same as Manhattan distance.</li>
+        </ul>
+        <p>
+          Values of <em>p</em> between 1 and 2 smoothly blend the two. 
+        </p>
+        <p>
+          The table below shows all flowers, sorted from closest to furthest from the star.
+          The columns Δx and Δy show how the flower is positioned relative to the star in the 2D
+          projection, and the distance column uses the currently selected distance formula.
+        </p>
+        <p>
+          Rows highlighted in gold are the current <em>k</em> nearest neighbours – exactly the points
+          whose dots in the scatter plot have a gold ring.
+        </p>
+          </div>
+        </div>
+
+        
+
+        <div class="distance-table-wrap">
+          <table class="data-table distance-table" id="distance-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Id</th>
+                <th>Class</th>
+                <th>x</th>
+                <th>y</th>
+                <th>&Delta;x</th>
+                <th>&Delta;y</th>
+                <th>d</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+            <!-- Majority vote: -->
+      <section class="majority-overview">
+        <h3>Majority vote &amp; final decision</h3>
+        <p>
+          Now that we know how to measure distance, KNN uses a very simple but powerful idea
+          to decide the flower species:
+        </p>
+        <ol>
+          <li>Take the <em>k</em> nearest neighbours under the chosen distance.</li>
+          <li>Count how many neighbours belong to each species.</li>
+          <li>The species with the most neighbours “wins” the vote.</li>
+        </ol>
+
+        <p>
+          In this demo the chatbot uses Minkowski distance with the current value of
+          <em>p</em> as its main decision rule. This means the final prediction is taken
+          from the Minkowski column. Showing all three side by side helps learners see
+          that different distance choices can sometimes lead to different, but still
+          explainable, decisions.
+        </p>
+
+        
+        <p class="vote-summary" id="vote-summary"></p>
+      </section>
+
+      <section class="vote-details">
+        <h3>How each distance measure votes</h3>
+        <p>
+          Below you can see how the vote would look under each distance measure. This makes
+          the chatbot’s behaviour transparent: the user can see exactly which examples
+          influenced the final prediction.
+        </p>
+
+        <div class="vote-breakdown">
+          <h4>Euclidean distance (straight-line)</h4>
+          <p><strong>Versicolor:</strong> 5 neighbours</p>
+          <p>The majority of the 5 nearest neighbours are Versicolor.</p>
+
+          <h4>Manhattan distance (grid)</h4>
+          <p><strong>Versicolor:</strong> 5 neighbours</p>
+          <p>The majority of the 5 nearest neighbours are Versicolor.</p>
+
+          <h4>Minkowski distance (p-th order)</h4>
+          <p><strong>Versicolor:</strong> 5 neighbours</p>
+          <p>The majority of the 5 nearest neighbours are Versicolor.</p>
+        </div>
+      </section>
+  </main>
+
+  <script>
+    // ---------------- DEMO DATASET ----------------
+    const datasetPoints = [
+      // --- Setosa examples ---
+      {
+        id: 1,
+        label: 'iris setosa',
+        x: 1.2,
+        y: 0.8,
+        source: 'Original dataset',
+        inTraining: true,
+        image: 'images/iris_setosa.jpg',
+        features: {
+          sepal_length: 5.1,
+          sepal_width: 3.5,
+          petal_length: 1.4,
+          petal_width: 0.2
+        }
+      },
+      {
+        id: 2,
+        label: 'alcea setosa',
+        x: 1.4,
+        y: 1.0,
+        source: 'Original dataset',
+        inTraining: true,
+        image: 'images/alcea_setosa.jpg',
+        features: {
+          sepal_length: 4.9,
+          sepal_width: 3.0,
+          petal_length: 1.4,
+          petal_width: 0.2
+        }
+      },
+      {
+        id: 3,
+        label: 'echeveria setosa',
+        x: 1.0,
+        y: 0.9,
+        source: 'Original dataset',
+        inTraining: true,
+        image: 'images/echeveria_setosa.jpg',
+        features: {
+          sepal_length: 4.7,
+          sepal_width: 3.2,
+          petal_length: 1.3,
+          petal_width: 0.2
+        }
+      },
+
+      // --- Versicolor examples ---
+      {
+        id: 4,
+        label: 'oxalis versicolor',
+        x: 3.1,
+        y: 2.2,
+        source: 'Original dataset',
+        inTraining: true,
+        image: 'images/oxalis_versicolor.jpg',
+        features: {
+          sepal_length: 6.2,
+          sepal_width: 2.8,
+          petal_length: 4.8,
+          petal_width: 1.8
+        }
+      },
+      {
+        id: 5,
+        label: 'sumpfiris iris versicolor',
+        x: 2.9,
+        y: 2.0,
+        source: 'Original dataset',
+        inTraining: true,
+        image: 'images/sumpfiris_iris_versicolor.jpg',
+        features: {
+          sepal_length: 6.0,
+          sepal_width: 2.7,
+          petal_length: 4.5,
+          petal_width: 1.5
+        }
+      },
+      {
+        id: 6,
+        label: 'clematis versicolor',
+        x: 3.3,
+        y: 2.4,
+        source: 'Original dataset',
+        inTraining: true,
+        image: 'images/clematis_versicolor.jpg',
+        features: {
+          sepal_length: 5.9,
+          sepal_width: 2.9,
+          petal_length: 4.2,
+          petal_width: 1.5
+        }
+      },
+
+      // --- Virginica examples ---
+      {
+        id: 7,
+        label: 'iris virginica',
+        x: 4.0,
+        y: 3.1,
+        source: 'Original dataset',
+        inTraining: true,
+        image: 'images/iris_virginica.jpg',
+        features: {
+          sepal_length: 7.2,
+          sepal_width: 3.0,
+          petal_length: 6.0,
+          petal_width: 2.0
+        }
+      },
+      {
+        id: 8,
+        label: 'mertensia virginica',
+        x: 4.3,
+        y: 3.4,
+        source: 'Original dataset',
+        inTraining: true,
+        image: 'images/mertensia_virginica.jpg',
+        features: {
+          sepal_length: 6.5,
+          sepal_width: 3.0,
+          petal_length: 5.5,
+          petal_width: 2.1
+        }
+      },
+      {
+        id: 9,
+        label: 'itea virginica',
+        x: 3.8,
+        y: 2.9,
+        source: 'Original dataset',
+        inTraining: true,
+        image: 'images/itea_virginica.jpg',
+        features: {
+          sepal_length: 6.7,
+          sepal_width: 3.1,
+          petal_length: 5.6,
+          petal_width: 2.4
+        }
+      }
+    ];
+
+    // ---------------- HELPER: COLORS & DISTANCES ----------------
+    function colorForLabel(label) {
+      const lower = label.toLowerCase();
+      if (lower.includes('setosa')) {
+        return 'rgba(56, 189, 248, 0.9)'; // blue
+      } else if (lower.includes('versicolor')) {
+        return 'rgba(34, 197, 94, 0.9)'; // green
+      } else if (lower.includes('virginica')) {
+        return 'rgba(244, 114, 182, 0.9)'; // pink
+      }
+      return 'rgba(148, 163, 184, 0.9)'; // grey fallback
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (ch) => {
+        switch (ch) {
+          case '&': return '&amp;';
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case '"': return '&quot;';
+          case "'": return '&#39;';
+          default: return ch;
+        }
+      });
+    }
+
+    let minkowskiP = 2.0;
+
+    // distance function using chosen metric
+    function distance2D(a, b, metric) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+
+      if (metric === 'manhattan') {
+        return Math.abs(dx) + Math.abs(dy);
+      } else if (metric === 'minkowski') {
+        const p = minkowskiP || 2;
+        const sum = Math.pow(Math.abs(dx), p) + Math.pow(Math.abs(dy), p);
+        return Math.pow(sum, 1 / p);
+      }
+      // default: Euclidean
+      return Math.hypot(dx, dy);
+    }
+
+    // --------------- VIEW TABS --------------------
+    const viewTabs = document.querySelectorAll('.view-tab');
+    const views = document.querySelectorAll('.app-view');
+
+    viewTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        viewTabs.forEach((t) => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        const target = tab.getAttribute('data-target');
+        views.forEach((v) => {
+          v.classList.toggle('active', v.id === target);
+        });
+      });
+    });
+
+    // --------------- EXPLANATION TABS --------------
+    const methodButtons = document.querySelectorAll('.step-pill[data-target]');
+    const methodPanels = document.querySelectorAll('.explanation-content .exp-panel');
+
+    methodButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        methodButtons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const targetId = btn.getAttribute('data-target');
+        methodPanels.forEach((panel) => {
+          panel.classList.toggle('active', panel.id === targetId);
+        });
+      });
+    });
+
+    // --------------- PARAMETER CONTROLS ------------
+    const kSlider = document.getElementById('k-slider');
+    const kValueBadge = document.getElementById('k-value');
+    const metricSelect = document.getElementById('metric-select');
+    const metricDescription = document.getElementById('metric-description');
+
+    const summaryK = document.getElementById('summary-k');
+    const summaryMetric = document.getElementById('summary-metric');
+
+    const summaryK2 = document.getElementById('summary-k-2');
+    const summaryMetric2 = document.getElementById('summary-metric-2');
+
+    const pSlider = document.getElementById('p-slider');
+    const pValueLabel = document.getElementById('p-value');
+
+    const distanceTabs = document.querySelectorAll('.distance-tab');
+    const distancePanels = document.querySelectorAll('.distance-panel');
+    const currentDistanceName = document.getElementById('current-distance-name');
+
+    function metricToDisplayName(metric) {
+      if (metric === 'manhattan') return 'Manhattan distance';
+      if (metric === 'minkowski') return `Minkowski distance (p = ${minkowskiP.toFixed(1)})`;
+      return 'Euclidean distance';
+    }
+
+    function updateCurrentDistanceName() {
+      if (!currentDistanceName) return;
+      currentDistanceName.textContent = metricToDisplayName(metricSelect.value);
+    }
+
+    function syncDistanceTabs(metric) {
+      distanceTabs.forEach((tab) => {
+        const m = tab.getAttribute('data-metric');
+        tab.classList.toggle('active', m === metric);
+      });
+      distancePanels.forEach((panel) => {
+        const m = panel.getAttribute('data-metric-panel');
+        panel.classList.toggle('active', m === metric);
+      });
+    }
+
+    distanceTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const metric = tab.getAttribute('data-metric');
+        metricSelect.value = metric;
+        metricSelect.dispatchEvent(new Event('change'));
+      });
+    });
+
+    function updateSettingsSummary() {
+      const kText = `k = ${kSlider.value}`;
+      const metricLabel = metricSelect.options[metricSelect.selectedIndex].text;
+      const metricText = `Metric: ${metricLabel.split(' ')[0]}`;
+
+      if (summaryK) summaryK.textContent = kText;
+      if (summaryMetric) summaryMetric.textContent = metricText;
+
+      if (summaryK2) summaryK2.textContent = kText;
+      if (summaryMetric2) summaryMetric2.textContent = metricText;
+    }
+
+    kSlider.addEventListener('input', () => {
+      kValueBadge.textContent = kSlider.value;
+      updateSettingsSummary();
+      updateScatterHighlight();
+    });
+
+    metricSelect.addEventListener('change', () => {
+      const value = metricSelect.value;
+      if (value === 'euclidean') {
+        metricDescription.textContent =
+          'Euclidean distance measures straight-line distance in feature space, like a ruler.';
+      } else if (value === 'manhattan') {
+        metricDescription.textContent =
+          'Manhattan distance adds up absolute differences along each feature dimension.';
+      } else if (value === 'minkowski') {
+        metricDescription.textContent =
+          'Minkowski distance is a general formula that behaves like Manhattan for p = 1 and Euclidean for p = 2.';
+      }
+      updateSettingsSummary();
+      syncDistanceTabs(value);
+      updateCurrentDistanceName();
+      updateScatterHighlight();
+    });
+
+    if (pSlider && pValueLabel) {
+      minkowskiP = parseFloat(pSlider.value);
+      pValueLabel.textContent = `p = ${minkowskiP.toFixed(1)}`;
+      pSlider.addEventListener('input', () => {
+        minkowskiP = parseFloat(pSlider.value);
+        pValueLabel.textContent = `p = ${minkowskiP.toFixed(1)}`;
+        updateCurrentDistanceName();
+        updateScatterHighlight();
+      });
+    }
+
+    updateSettingsSummary(); // initial
+    syncDistanceTabs(metricSelect.value);
+    updateCurrentDistanceName();
+
+    // ----------------- CHAT FRONTEND ----------------
+    const chatWindow = document.getElementById('chat-window');
+    const chatInput = document.getElementById('chat-input');
+    const chatSend = document.getElementById('chat-send');
+    const uploadBtn = document.getElementById('chat-upload-btn');
+    const fileInput = document.getElementById('file-input');
+    
+    function addChatMessage(content, sender = 'user', isHTML = false) {
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('chat-message', sender);
+      const bubble = document.createElement('div');
+      bubble.classList.add('chat-bubble');
+      if (isHTML) {
+        bubble.innerHTML = content;
+      } else {
+        bubble.textContent = content;
+      }
+      wrapper.appendChild(bubble);
+      chatWindow.appendChild(wrapper);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+    async function sendToBackend(message) {
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('chat-message', 'bot');
+      const bubble = document.createElement('div');
+      bubble.classList.add('chat-bubble');
+      bubble.textContent = 'FlowerLens is thinking...';
+      wrapper.appendChild(bubble);
+      chatWindow.appendChild(wrapper);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+      
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ message })
+        });
+        wrapper.remove();
+        if (!response.ok) {
+      throw new Error('HTTP ' + response.status);
+    }
+    const data = await response.json();
+    if (data.reply) {
+      addChatMessage(data.reply, 'bot');
+    } else if (data.error) {
+      addChatMessage('Server error: ' + data.error, 'bot');
+    } else {
+      addChatMessage('No reply from backend.', 'bot');
+    }
+  } catch (error) {
+    console.error(error);
+    wrapper.remove();
+    addChatMessage('Error while contacting the backend.', 'bot');
+  }
+}
+
+chatSend.addEventListener('click', () => {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  addChatMessage(text, 'user');
+  chatInput.value = '';
+  sendToBackend(text);
+});
+
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    chatSend.click();
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // ---------------- QUERY POINT (UPLOADED FLOWER) ----------------
+    let queryPoint = null;
+
+    function setQueryPointFromUpload() {
+      const meanX =
+        datasetPoints.reduce((sum, p) => sum + p.x, 0) / datasetPoints.length;
+      const meanY =
+        datasetPoints.reduce((sum, p) => sum + p.y, 0) / datasetPoints.length;
+
+      const jitterX = (Math.random() - 0.5) * 0.3;
+      const jitterY = (Math.random() - 0.5) * 0.3;
+
+      queryPoint = {
+        x: meanX + jitterX,
+        y: meanY + jitterY
+      };
+      updateQueryTrace();
+      updateScatterHighlight();
+    }
+
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+
+        const html = `
+          <div class="image-message">
+            <img src="${dataUrl}" alt="Uploaded flower image" class="chat-image-preview" />
+            <div class="image-caption">Uploaded flower image</div>
+          </div>
+        `;
+        addChatMessage(html, 'user', true);
+
+        addChatMessage(
+          'Nice! I will analyse this flower and look for similar flowers in the training data.',
+          'bot'
+        );
+        
+        const knnInfo = `Current KNN settings: ${summaryK.textContent}, ${summaryMetric.textContent}.`;
+        const prompt = `I just uploaded a picture of an iris flower. ${knnInfo} ` +
+        `Please tell me briefly which iris species (setosa, versicolor or virginica) it is and explain in one sentence.`;
+        
+        sendToBackend(prompt);
+
+
+
+        setQueryPointFromUpload();
+        uploadBtn.classList.remove('highlighted-upload');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ----------------- DATASET TABLE & PLOT ----------
+    const datasetTableBody = document.querySelector('#dataset-table tbody');
+    const classFilter = document.getElementById('class-filter');
+    const removeBtn = document.getElementById('btn-remove-image');
+    const addBtn = document.getElementById('btn-add-image');
+    const datasetFileInput = document.getElementById('dataset-file-input');
+    const pointDetailsDiv = document.getElementById('point-details');
+    let selectedRowId = null;
+
+    const distanceTableBody = document.querySelector('#distance-table tbody');
+    const voteSummary = document.getElementById('vote-summary');
+
+    function renderDatasetTable() {
+      const filter = classFilter.value;
+      datasetTableBody.innerHTML = '';
+
+      datasetPoints
+        .filter((p) => {
+          if (filter === 'all') return true;
+          return p.label.toLowerCase().includes(filter.toLowerCase());
+        })
+        .forEach((point) => {
+          const tr = document.createElement('tr');
+          tr.dataset.id = point.id;
+          tr.innerHTML = `
+            <td>
+              ${
+                point.image
+                  ? `<img src="${point.image}" alt="Flower ${point.id}" class="thumb-img" />`
+                  : ''
+              }
+            </td>
+            <td>${point.id}</td>
+            <td>${escapeHtml(point.label)}</td>
+            <td>${escapeHtml(point.source)}</td>
+            <td>${point.inTraining ? 'Yes' : 'No'}</td>
+          `;
+
+          tr.addEventListener('click', () => {
+            selectDatasetRow(point.id);
+            showPointDetails(point);
+          });
+          datasetTableBody.appendChild(tr);
+        });
+    }
+
+    function selectDatasetRow(id) {
+      selectedRowId = id;
+      removeBtn.disabled = false;
+      document.querySelectorAll('#dataset-table tbody tr').forEach((row) => {
+        row.classList.toggle('active', Number(row.dataset.id) === id);
+      });
+      updateScatterHighlight();
+    }
+
+    classFilter.addEventListener('change', renderDatasetTable);
+
+    addBtn.addEventListener('click', () => {
+      datasetFileInput.click();
+    });
+
+    datasetFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target.result;
+
+        const newId =
+          datasetPoints.length > 0
+            ? Math.max(...datasetPoints.map((p) => p.id)) + 1
+            : 1;
+
+        const defaultLabel = 'new_flower';
+        const label =
+          prompt('Enter a class / name for this flower:', defaultLabel) ||
+          defaultLabel;
+
+        const meanX =
+          datasetPoints.reduce((sum, p) => sum + p.x, 0) / datasetPoints.length;
+        const meanY =
+          datasetPoints.reduce((sum, p) => sum + p.y, 0) / datasetPoints.length;
+        const jitterX = (Math.random() - 0.5) * 0.6;
+        const jitterY = (Math.random() - 0.5) * 0.6;
+
+        const newPoint = {
+          id: newId,
+          label,
+          x: meanX + jitterX,
+          y: meanY + jitterY,
+          source: 'User upload',
+          inTraining: true,
+          image: dataUrl,
+          features: {
+            sepal_length: 0,
+            sepal_width: 0,
+            petal_length: 0,
+            petal_width: 0
+          }
+        };
+
+        datasetPoints.push(newPoint);
+        renderDatasetTable();
+        Plotly.purge('dataset-scatter');
+        initScatterPlot();
+      };
+
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    });
+
+    removeBtn.addEventListener('click', () => {
+      if (selectedRowId == null) return;
+      const idx = datasetPoints.findIndex((p) => p.id === selectedRowId);
+      if (idx >= 0) {
+        datasetPoints.splice(idx, 1);
+        selectedRowId = null;
+        removeBtn.disabled = true;
+        renderDatasetTable();
+        Plotly.purge('dataset-scatter');
+        initScatterPlot();
+        pointDetailsDiv.innerHTML =
+          '<p>The selected data point has been removed from the dataset.</p>';
+      }
+    });
+
+    let scatterInitialized = false;
+
+    function initScatterPlot() {
+      const x = datasetPoints.map((p) => p.x);
+      const y = datasetPoints.map((p) => p.y);
+      const labels = datasetPoints.map((p) => p.label);
+      const ids = datasetPoints.map((p) => p.id);
+      const colors = datasetPoints.map((p) => colorForLabel(p.label));
+      const sizes = datasetPoints.map(() => 10);
+      const lineColors = datasetPoints.map(() => 'rgba(15, 23, 42, 0.95)');
+      const lineWidths = datasetPoints.map(() => 1);
+
+      const minX = Math.min(...x);
+      const maxX = Math.max(...x);
+      const minY = Math.min(...y);
+      const maxY = Math.max(...y);
+      const padX = (maxX - minX) * 0.15 || 0.5;
+      const padY = (maxY - minY) * 0.15 || 0.5;
+
+      const trainTrace = {
+        x,
+        y,
+        text: labels.map((l, i) => `Id: ${ids[i]}<br>Class: ${escapeHtml(l)}`),
+        mode: 'markers',
+        type: 'scatter',
+        name: 'Training flowers',
+        hovertemplate: '%{text}<br>x: %{x}<br>y: %{y}<extra></extra>',
+        marker: {
+          size: sizes,
+          color: colors,
+          line: { width: lineWidths, color: lineColors }
+        }
+      };
+
+      const queryTrace = {
+        x: queryPoint ? [queryPoint.x] : [],
+        y: queryPoint ? [queryPoint.y] : [],
+        mode: 'markers',
+        type: 'scatter',
+        name: 'Uploaded flower (turquoise star)',
+        marker: {
+          size: queryPoint ? 20 : 0,
+          color: 'rgba(56, 189, 248, 1)',
+          symbol: 'star'
+        },
+        hoverinfo: 'skip'
+      };
+
+            const layout = {
+        margin: { t: 10, r: 10, b: 40, l: 40 },
+        xaxis: {
+          title: '',
+          range: [minX - padX, maxX + padX]
+        },
+        yaxis: {
+          title: '',
+          range: [minY - padY, maxY + padY]
+        },
+        hovermode: 'closest',
+        showlegend: true,
+        legend: {
+          orientation: 'h',
+          x: 0,
+          y: -0.18,
+          xanchor: 'left',
+          font: { size: 10, color: '#e5e7eb' }
+        },
+        /* NEU: kleine Erklärung direkt im Plot */
+        annotations: [
+          {
+            xref: 'paper',
+            yref: 'paper',
+            x: 0.02,
+            y: 0.98,
+            showarrow: false,
+            align: 'left',
+            text: 'Gold ring = current k nearest neighbours',
+            font: { size: 10, color: '#facc15' },
+            bgcolor: 'rgba(15, 23, 42, 0.85)',
+            bordercolor: 'rgba(250, 204, 21, 0.7)',
+            borderwidth: 1,
+            borderpad: 4
+          }
+        ]
+      };
+
+
+     
+
+      Plotly.newPlot('dataset-scatter', [trainTrace, queryTrace], layout, {
+        responsive: true
+      });
+
+      const plotDiv = document.getElementById('dataset-scatter');
+      plotDiv.on('plotly_click', (data) => {
+        const pt = data.points[0];
+        if (pt.curveNumber !== 0) {
+          return;
+        }
+        const pointIndex = pt.pointIndex;
+        const point = datasetPoints[pointIndex];
+        showPointDetails(point);
+        selectDatasetRow(point.id);
+      });
+
+      scatterInitialized = true;
+      updateScatterHighlight();
+    }
+
+    function updateQueryTrace() {
+      if (!scatterInitialized) return;
+      const x = queryPoint ? [queryPoint.x] : [];
+      const y = queryPoint ? [queryPoint.y] : [];
+      const size = queryPoint ? 20 : 0;
+      Plotly.restyle(
+        'dataset-scatter',
+        { x: [x], y: [y], 'marker.size': [size] },
+        [1]
+      );
+    }
+
+    function baseClass(label) {
+      const lower = label.toLowerCase();
+      if (lower.includes('setosa')) return 'Setosa';
+      if (lower.includes('versicolor')) return 'Versicolor';
+      if (lower.includes('virginica')) return 'Virginica';
+      return 'Other';
+    }
+
+    // Highlight neighbours with strong golden ring
+    function updateScatterHighlight() {
+      if (!scatterInitialized) return;
+
+      const metric = metricSelect.value;
+      const k = parseInt(kSlider.value, 10);
+
+      const refPoint =
+        queryPoint ||
+        (selectedRowId != null
+          ? datasetPoints.find((p) => p.id === selectedRowId)
+          : null);
+
+      const colors = [];
+      const sizes = [];
+      const lineColors = [];
+      const lineWidths = [];
+      let neighbourIds = [];
+
+      if (refPoint) {
+        const distances = datasetPoints
+          .map((p) => ({
+            id: p.id,
+            d: distance2D({ x: p.x, y: p.y }, refPoint, metric)
+          }))
+          .sort((a, b) => a.d - b.d);
+
+        neighbourIds = distances
+          .slice(0, Math.min(k, distances.length))
+          .map((obj) => obj.id);
+      }
+
+      datasetPoints.forEach((p, i) => {
+        const baseColor = colorForLabel(p.label);
+        colors[i] = baseColor;
+        sizes[i] = 10;
+        lineColors[i] = 'rgba(15, 23, 42, 0.95)';
+        lineWidths[i] = 1;
+
+        if (neighbourIds.includes(p.id)) {
+          sizes[i] = 18;
+          lineColors[i] = 'rgba(250, 204, 21, 1)'; // strong gold ring
+          lineWidths[i] = 6;
+        }
+      });
+
+      Plotly.restyle(
+        'dataset-scatter',
+        {
+          'marker.color': [colors],
+          'marker.size': [sizes],
+          'marker.line.color': [lineColors],
+          'marker.line.width': [lineWidths]
+        },
+        [0]
+      );
+
+      updateQueryTrace();
+      updateDistanceTable();
+    }
+
+    function showPointDetails(point) {
+      pointDetailsDiv.innerHTML = `
+        ${
+          point.image
+            ? `
+        <img src="${point.image}" alt="Flower ${point.id}" class="point-details-image" />
+        `
+            : ''
+        }
+
+        <p><strong>Id:</strong> ${point.id}</p>
+        <p><strong>Class:</strong> ${escapeHtml(point.label)}</p>
+        <p><strong>Source:</strong> ${escapeHtml(point.source)}</p>
+        <p><strong>Used in training:</strong> ${point.inTraining ? 'Yes' : 'No'}</p>
+      `;
+    }
+
+
+    function updateDistanceTable() {
+      if (!distanceTableBody) return;
+
+      const metric = metricSelect.value;
+      const k = parseInt(kSlider.value, 10);
+
+      const refPoint =
+        queryPoint ||
+        (selectedRowId != null
+          ? datasetPoints.find((p) => p.id === selectedRowId)
+          : null);
+
+      if (!refPoint) {
+        distanceTableBody.innerHTML = `
+          <tr>
+            <td colspan="7">
+              Upload a flower image or click a point in the dataset to see distances.
+            </td>
+          </tr>
+        `;
+        if (voteSummary) {
+          voteSummary.textContent = '';
+        }
+        return;
+      }
+
+      const distances = datasetPoints
+        .map((p, index) => {
+          const dx = p.x - refPoint.x;
+          const dy = p.y - refPoint.y;
+          const d = distance2D({ x: p.x, y: p.y }, refPoint, metric);
+          return { index, point: p, dx, dy, d };
+        })
+        .sort((a, b) => a.d - b.d);
+
+      const maxNeighbours = Math.min(k, distances.length);
+
+      let rowsHtml = '';
+      const classCounts = {};
+
+      distances.forEach((entry, idx) => {
+        const { point, dx, dy, d } = entry;
+        const isNeighbour = idx < maxNeighbours;
+        const rowClass = isNeighbour ? 'nearest-row' : '';
+
+        if (isNeighbour) {
+          const cls = baseClass(point.label);
+          classCounts[cls] = (classCounts[cls] || 0) + 1;
+        }
+
+        rowsHtml += `
+        <tr class="${rowClass}">
+          <td>${idx + 1}</td>              
+          <td>${point.id}</td>             
+          <td>${escapeHtml(point.label)}</td>
+          <td>${point.x.toFixed(2)}</td>
+          <td>${point.y.toFixed(2)}</td>
+          <td>${dx.toFixed(2)}</td>
+          <td>${dy.toFixed(2)}</td>
+          <td>${d.toFixed(2)}</td>
+          </tr>
+
+
+        `;
+      });
+
+      distanceTableBody.innerHTML = rowsHtml;
+
+      if (voteSummary) {
+        const entries = Object.entries(classCounts).sort(
+          (a, b) => b[1] - a[1]
+        );
+        if (entries.length === 0) {
+          voteSummary.textContent = '';
+          return;
+        }
+
+        const parts = entries.map(
+          ([cls, count]) =>
+            `${cls}: ${count} neighbour${count === 1 ? '' : 's'}`
+        );
+        const [majorityClass, majorityCount] = entries[0];
+
+        let metricName = 'Euclidean';
+        if (metric === 'manhattan') metricName = 'Manhattan';
+        if (metric === 'minkowski')
+          metricName = `Minkowski (p = ${minkowskiP.toFixed(1)})`;
+
+        voteSummary.innerHTML = `
+          <strong>Current vote using ${metricName} distance:</strong>
+          ${parts.join(' · ')}.
+          The majority of the ${maxNeighbours} nearest neighbours
+          are <strong>${majorityClass}</strong>
+          (${majorityCount} of ${maxNeighbours}).
+        `;
+      }
+    }
+
+    renderDatasetTable();
+    initScatterPlot();
+  </script>
+</body>
+</html>
+
+
+
+
