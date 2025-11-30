@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FlowerLens – Explainable KNN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="knn_explainer.css">
+</head>
+<body>
+<div class="page">
+
+  <!-- FAKE TAB BAR (VISUAL ONLY) -->
+  <nav class="tab-bar" aria-label="Main sections">
+    <button class="tab-btn">Ask FlowerLens</button>
+    <button class="tab-btn active">Model training data &amp; explanation</button>
+  </nav>
+
+  <!-- TOP CONTROLS: current settings + sliders -->
+  <section class="settings-card">
+    <div class="settings-left">
+      <h2 class="settings-title">Current KNN settings</h2>
+      <p class="settings-line">
+        <span id="settingsK" class="pill pill-strong">k = 5</span>
+        <span id="settingsMetric" class="pill">Metric: Euclidean / Manhattan / Minkowski</span>
+      </p>
+      <p class="settings-caption">
+        These settings control how many neighbours vote and how we measure “distance”
+        between flowers in the feature space.
+      </p>
+    </div>
+    <div class="settings-right">
+      <div class="control-group">
+        <label for="kSlider">Number of neighbours (k)</label>
+        <div class="control-row">
+          <input id="kSlider" type="range" min="1" max="9" step="2" value="5">
+          <span id="kValue" class="slider-value">5</span>
+        </div>
+        <p class="hint">
+          Small k → sensitive to noise; large k → smoother but may ignore fine details.
+          We use odd k ≤ 9 to avoid ties.
+        </p>
+      </div>
+
+      <div class="control-group">
+        <label for="pSlider">Minkowski order p</label>
+        <div class="control-row">
+          <input id="pSlider" type="range" min="1" max="3" step="0.1" value="2">
+          <span id="pValue" class="slider-value">2.0</span>
+        </div>
+        <p class="hint">
+          p = 1 → Manhattan, p = 2 → Euclidean. Values in between smoothly blend both.
+          Used on the Minkowski step and for the final decision.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN CONTENT GRID: left = steps, right = plot -->
+  <main class="content-grid">
+
+    <!-- LEFT COLUMN: STEPS & TABLES -->
+    <section class="left-column">
+      <div class="step-card">
+        <!-- stepper -->
+        <div class="stepper-header">
+          <span class="stepper-label">KNN explanation steps</span>
+          <div class="stepper" aria-label="KNN steps">
+            <button class="step-pill active" data-step="1">1</button>
+            <button class="step-pill" data-step="2">2</button>
+            <button class="step-pill" data-step="3">3</button>
+            <button class="step-pill" data-step="4">4</button>
+            <button class="step-pill" data-step="5">5</button>
+          </div>
+        </div>
+
+        <!-- STEP CONTENTS -->
+
+        <!-- STEP 1: OVERVIEW -->
+        <section class="step step-1 active" aria-labelledby="step1-title">
+          <h2 id="step1-title">Step 1 – What KNN is doing</h2>
+          <p>
+            The coloured points on the right are <strong>training flowers</strong> with known species:
+            blue = Setosa, red = Versicolor, green = Virginica. The <span class="inline-star">pink star</span>
+            is a <strong>new flower</strong> whose species we want to predict.
+          </p>
+          <p>
+            KNN makes a prediction by:
+          </p>
+          <ol>
+            <li>Measuring the <strong>distance</strong> from the star to every training flower.</li>
+            <li>Sorting flowers from closest to furthest.</li>
+            <li>Taking the closest <strong>k</strong> neighbours.</li>
+            <li>Letting those neighbours <strong>vote</strong> for the most likely species.</li>
+          </ol>
+          <p>
+            Use the step buttons above to walk through each distance measure and then see
+            the final majority vote.
+          </p>
+        </section>
+
+        <!-- STEP 2: EUCLIDEAN -->
+        <section class="step step-2" aria-labelledby="step2-title">
+          <h2 id="step2-title">Step 2 – Euclidean distance (straight-line)</h2>
+          <p>
+            Euclidean distance is the ordinary straight-line distance. Between the star
+            <code>(x★, y★)</code> and a flower <code>(x, y)</code>:
+          </p>
+          <p class="formula">
+            d<sub>E</sub> = √[(x − x★)² + (y − y★)²]
+          </p>
+          <p>
+            On the plot, the flowers with a <span class="euclid-ring">green ring</span> are
+            the current k nearest neighbours under Euclidean distance (like measuring with
+            a ruler).
+          </p>
+
+          <h3 class="table-heading">Euclidean distances to each flower</h3>
+          <p class="hint">
+            Sorted from closest to furthest. Highlighted rows are the k nearest neighbours.
+          </p>
+          <div class="table-wrap">
+            <table class="dist-table" id="table-euclidean">
+              <thead>
+              <tr>
+                <th>#</th>
+                <th>Class</th>
+                <th>x</th>
+                <th>y</th>
+                <th>Δx</th>
+                <th>Δy</th>
+                <th>d<sub>E</sub></th>
+              </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- STEP 3: MANHATTAN -->
+        <section class="step step-3" aria-labelledby="step3-title">
+          <h2 id="step3-title">Step 3 – Manhattan distance (grid-like)</h2>
+          <p>
+            Manhattan distance only allows horizontal and vertical moves, like walking along
+            city blocks:
+          </p>
+          <p class="formula">
+            d<sub>M</sub> = |x − x★| + |y − y★|
+          </p>
+          <p>
+            On the plot, flowers with an <span class="manhattan-ring">orange ring</span> are
+            the k nearest neighbours under Manhattan distance. This can favour points that
+            are aligned horizontally or vertically with the star.
+          </p>
+
+          <h3 class="table-heading">Manhattan distances to each flower</h3>
+          <p class="hint">
+            Compare the ordering with Euclidean distance – some neighbours may change.
+          </p>
+          <div class="table-wrap">
+            <table class="dist-table" id="table-manhattan">
+              <thead>
+              <tr>
+                <th>#</th>
+                <th>Class</th>
+                <th>x</th>
+                <th>y</th>
+                <th>|Δx|</th>
+                <th>|Δy|</th>
+                <th>d<sub>M</sub></th>
+              </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- STEP 4: MINKOWSKI -->
+        <section class="step step-4" aria-labelledby="step4-title">
+          <h2 id="step4-title">Step 4 – Minkowski distance (family of distances)</h2>
+          <p>
+            Minkowski distance is a general formula that includes Euclidean and Manhattan
+            as special cases. For a parameter <code>p ≥ 1</code>:
+          </p>
+          <p class="formula">
+            d<sub>p</sub> = ( |x − x★|<sup>p</sup> + |y − y★|<sup>p</sup> )<sup>1/p</sup>
+          </p>
+          <ul>
+            <li>p = 1 → Manhattan distance</li>
+            <li>p = 2 → Euclidean distance</li>
+          </ul>
+          <p>
+            Use the <strong>Minkowski order p</strong> slider above. On the plot, flowers with a
+            <span class="mink-ring">purple ring</span> are the k nearest neighbours
+            under Minkowski distance for the current p.
+          </p>
+
+          <h3 class="table-heading">Minkowski distances (current p)</h3>
+          <p class="hint">
+            Notice how the neighbour ranking smoothly changes as you move p between 1 and 2.
+          </p>
+          <div class="table-wrap">
+            <table class="dist-table" id="table-minkowski">
+              <thead>
+              <tr>
+                <th>#</th>
+                <th>Class</th>
+                <th>x</th>
+                <th>y</th>
+                <th>d<sub>p</sub></th>
+                <th>Nearest?</th>
+              </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- STEP 5: MAJORITY VOTE -->
+        <section class="step step-5" aria-labelledby="step5-title">
+          <h2 id="step5-title">Step 5 – Majority vote &amp; final decision</h2>
+          <p>
+            Finally, KNN lets the nearest neighbours <strong>vote</strong> on the species:
+          </p>
+          <ol>
+            <li>Take the k closest neighbours under the chosen distance measure.</li>
+            <li>Count how many belong to each flower species.</li>
+            <li>The species with the most neighbours wins.</li>
+          </ol>
+          <p>
+            Below you can see the votes under Euclidean, Manhattan, and Minkowski distances.
+            FlowerLens uses Minkowski with the current value of p as the main decision rule,
+            but showing all three keeps the prediction fully explainable.
+          </p>
+
+          <div id="voteSummary" class="decision-summary">
+            <!-- Filled by JS -->
+          </div>
+        </section>
+
+        <!-- NAV BUTTONS -->
+        <div class="step-nav">
+          <button id="prevStep" class="btn-secondary" type="button">← Previous</button>
+          <button id="nextStep" class="btn-primary" type="button">Next →</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: PLOT (STAR + POINTS LIVE HERE) -->
+    <section class="right-column">
+      <div class="plot-card">
+        <div class="plot-header-top">
+          <span class="plot-badge">Model view</span>
+          <span id="currentStepLabel" class="plot-step-label">Step 1 of 5 – Overview</span>
+        </div>
+
+        <div class="plot" id="plotCanvas">
+          <!-- star -->
+          <div class="star" id="queryPoint" style="left:60%; top:50%;">★</div>
+
+          <!-- Setosa (blue) -->
+          <div class="point setosa" data-class="Setosa" data-x="20" data-y="75" style="left:20%; top:75%;"></div>
+          <div class="point setosa" data-class="Setosa" data-x="30" data-y="78" style="left:30%; top:78%;"></div>
+          <div class="point setosa" data-class="Setosa" data-x="25" data-y="70" style="left:25%; top:70%;"></div>
+          <div class="point setosa" data-class="Setosa" data-x="35" data-y="72" style="left:35%; top:72%;"></div>
+          <div class="point setosa" data-class="Setosa" data-x="40" data-y="80" style="left:40%; top:80%;"></div>
+
+          <!-- Versicolor (red) -->
+          <div class="point versicolor" data-class="Versicolor" data-x="65" data-y="55" style="left:65%; top:55%;"></div>
+          <div class="point versicolor" data-class="Versicolor" data-x="70" data-y="52" style="left:70%; top:52%;"></div>
+          <div class="point versicolor" data-class="Versicolor" data-x="75" data-y="50" style="left:75%; top:50%;"></div>
+          <div class="point versicolor" data-class="Versicolor" data-x="80" data-y="48" style="left:80%; top:48%;"></div>
+          <div class="point versicolor" data-class="Versicolor" data-x="85" data-y="46" style="left:85%; top:46%;"></div>
+
+          <!-- Virginica (green) -->
+          <div class="point virginica" data-class="Virginica" data-x="35" data-y="25" style="left:35%; top:25%;"></div>
+          <div class="point virginica" data-class="Virginica" data-x="40" data-y="20" style="left:40%; top:20%;"></div>
+          <div class="point virginica" data-class="Virginica" data-x="45" data-y="22" style="left:45%; top:22%;"></div>
+          <div class="point virginica" data-class="Virginica" data-x="50" data-y="18" style="left:50%; top:18%;"></div>
+          <div class="point virginica" data-class="Virginica" data-x="55" data-y="24" style="left:55%; top:24%;"></div>
+
+          <!-- Legend -->
+          <div class="legend">
+            <div><span class="dot dot-setosa"></span> Setosa</div>
+            <div><span class="dot dot-versicolor"></span> Versicolor</div>
+            <div><span class="dot dot-virginica"></span> Virginica</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- JS: distances + step navigation -->
+<script>
+  const query = { x: 60, y: 50 }; // same scale as CSS percentages
+
+  const points = Array.from(document.querySelectorAll('.point')).map((el, idx) => ({
+    id: idx + 1,
+    el,
+    x: parseFloat(el.dataset.x),
+    y: parseFloat(el.dataset.y),
+    cls: el.dataset.class
+  }));
+
+  const kSlider = document.getElementById('kSlider');
+  const kValueSpan = document.getElementById('kValue');
+  const settingsK = document.getElementById('settingsK');
+  const settingsMetric = document.getElementById('settingsMetric');
+  const pSlider = document.getElementById('pSlider');
+  const pValueSpan = document.getElementById('pValue');
+  const currentStepLabel = document.getElementById('currentStepLabel');
+
+  const stepNames = [
+    'Step 1 of 5 – Overview',
+    'Step 2 of 5 – Euclidean distance',
+    'Step 3 of 5 – Manhattan distance',
+    'Step 4 of 5 – Minkowski distance',
+    'Step 5 of 5 – Majority vote'
+  ];
+
+  let currentStep = 1;
+
+  function getK() {
+    let k = parseInt(kSlider.value, 10);
+    if (k % 2 === 0) k += 1;
+    if (k > 9) k = 9;
+    return k;
+  }
+
+  function euclideanDist(pt) {
+    const dx = pt.x - query.x;
+    const dy = pt.y - query.y;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+
+  function manhattanDist(pt) {
+    const dx = Math.abs(pt.x - query.x);
+    const dy = Math.abs(pt.y - query.y);
+    return dx + dy;
+  }
+
+  function minkowskiDist(pt, p) {
+    const dx = Math.abs(pt.x - query.x);
+    const dy = Math.abs(pt.y - query.y);
+    const sum = Math.pow(dx, p) + Math.pow(dy, p);
+    return Math.pow(sum, 1/p);
+  }
+
+  function resetHighlights() {
+    points.forEach(p =>
+      p.el.classList.remove('nearest-euclidean', 'nearest-manhattan', 'nearest-minkowski')
+    );
+  }
+
+  function fillEuclideanTable() {
+    const tbody = document.querySelector('#table-euclidean tbody');
+    if (tbody) tbody.innerHTML = '';
+    const k = getK();
+    const sorted = [...points].map(p => ({
+      ...p,
+      dx: p.x - query.x,
+      dy: p.y - query.y,
+      d: euclideanDist(p)
+    })).sort((a,b) => a.d - b.d);
+
+    if (tbody) {
+      sorted.forEach((p, i) => {
+        const tr = document.createElement('tr');
+        if (i < k) tr.classList.add('highlight');
+        tr.innerHTML = `
+          <td>${p.id}</td>
+          <td>${p.cls}</td>
+          <td>${p.x.toFixed(1)}</td>
+          <td>${p.y.toFixed(1)}</td>
+          <td>${p.dx.toFixed(1)}</td>
+          <td>${p.dy.toFixed(1)}</td>
+          <td>${p.d.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    return { sorted, nearest: sorted.slice(0, k) };
+  }
+
+  function fillManhattanTable() {
+    const tbody = document.querySelector('#table-manhattan tbody');
+    if (tbody) tbody.innerHTML = '';
+    const k = getK();
+    const sorted = [...points].map(p => {
+      const dx = Math.abs(p.x - query.x);
+      const dy = Math.abs(p.y - query.y);
+      return { ...p, dx, dy, d: dx + dy };
+    }).sort((a,b) => a.d - b.d);
+
+    if (tbody) {
+      sorted.forEach((p, i) => {
+        const tr = document.createElement('tr');
+        if (i < k) tr.classList.add('highlight');
+        tr.innerHTML = `
+          <td>${p.id}</td>
+          <td>${p.cls}</td>
+          <td>${p.x.toFixed(1)}</td>
+          <td>${p.y.toFixed(1)}</td>
+          <td>${p.dx.toFixed(1)}</td>
+          <td>${p.dy.toFixed(1)}</td>
+          <td>${p.d.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    return { sorted, nearest: sorted.slice(0, k) };
+  }
+
+  function fillMinkowskiTable() {
+    const tbody = document.querySelector('#table-minkowski tbody');
+    if (tbody) tbody.innerHTML = '';
+    const k = getK();
+    const p = parseFloat(pSlider.value);
+    const sorted = [...points].map(pt => ({
+      ...pt,
+      d: minkowskiDist(pt, p)
+    })).sort((a,b) => a.d - b.d);
+
+    if (tbody) {
+      sorted.forEach((p, i) => {
+        const tr = document.createElement('tr');
+        if (i < k) tr.classList.add('highlight');
+        tr.innerHTML = `
+          <td>${p.id}</td>
+          <td>${p.cls}</td>
+          <td>${p.x.toFixed(1)}</td>
+          <td>${p.y.toFixed(1)}</td>
+          <td>${p.d.toFixed(2)}</td>
+          <td>${i < k ? '✔' : ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    return { sorted, nearest: sorted.slice(0, k) };
+  }
+
+  function countVotes(nearest) {
+    const counts = {};
+    nearest.forEach(p => {
+      counts[p.cls] = (counts[p.cls] || 0) + 1;
+    });
+    const entries = Object.entries(counts);
+    if (!entries.length) return { counts, winner: null, max: 0, ties: [] };
+
+    entries.sort((a,b) => b[1] - a[1]);
+    const max = entries[0][1];
+    const tied = entries.filter(([_, c]) => c === max).map(([cls]) => cls);
+    return {
+      counts,
+      winner: tied.length === 1 ? tied[0] : null,
+      max,
+      ties: tied
+    };
+  }
+
+  function renderVoteBlock(title, colorClass, result, kVal) {
+    const entries = Object.entries(result.counts);
+    const list = entries.length
+      ? '<ul>' + entries.map(([cls, c]) =>
+          `<li><strong>${cls}</strong>: ${c} neighbour${c !== 1 ? 's' : ''}</li>`).join('') +
+        '</ul>'
+      : '<p>No neighbours found.</p>';
+
+    let conclusion;
+    if (!entries.length) {
+      conclusion = 'No vote is possible.';
+    } else if (result.winner) {
+      conclusion = `The majority of the ${kVal} nearest neighbours are <strong>${result.winner}</strong>.`;
+    } else {
+      conclusion = `There is a <strong>tie</strong> between: <strong>${result.ties.join(', ')}</strong>. KNN would need a tie-breaking rule (for example, smaller k or a secondary metric).`;
+    }
+
+    return `
+      <div class="metric-card ${colorClass}">
+        <h4>${title}</h4>
+        ${list}
+        <p class="metric-conclusion">${conclusion}</p>
+      </div>
+    `;
+  }
+
+  function updateVoteSummary(eNearest, mNearest, mkNearest) {
+    const kVal = getK();
+    const eRes = countVotes(eNearest);
+    const mRes = countVotes(mNearest);
+    const mkRes = countVotes(mkNearest);
+
+    const summaryEl = document.getElementById('voteSummary');
+    if (!summaryEl) return;
+
+    summaryEl.innerHTML =
+      '<div class="metric-grid">' +
+        renderVoteBlock('Euclidean distance', 'metric-euclid', eRes, kVal) +
+        renderVoteBlock('Manhattan distance', 'metric-manhattan', mRes, kVal) +
+        renderVoteBlock('Minkowski distance', 'metric-minkowski', mkRes, kVal) +
+      '</div>' +
+      `<p class="overall-note">
+        In FlowerLens the chatbot uses <strong>Minkowski distance</strong> with the current
+        value of p as its main rule. Showing all three keeps the model transparent: you can
+        see how different distance choices sometimes lead to different, but still explainable,
+        outcomes.
+      </p>`;
+  }
+
+  function applyHighlightsForStep(step, eNearest, mNearest, mkNearest) {
+    resetHighlights();
+
+    if (step === 2) {
+      eNearest.forEach(p => p.el.classList.add('nearest-euclidean'));
+      settingsMetric.textContent = 'Metric: Euclidean';
+    } else if (step === 3) {
+      mNearest.forEach(p => p.el.classList.add('nearest-manhattan'));
+      settingsMetric.textContent = 'Metric: Manhattan';
+    } else if (step === 4) {
+      mkNearest.forEach(p => p.el.classList.add('nearest-minkowski'));
+      settingsMetric.textContent = 'Metric: Minkowski';
+    } else if (step === 5) {
+      eNearest.forEach(p => p.el.classList.add('nearest-euclidean'));
+      mNearest.forEach(p => p.el.classList.add('nearest-manhattan'));
+      mkNearest.forEach(p => p.el.classList.add('nearest-minkowski'));
+      settingsMetric.textContent = 'Metric: Euclidean / Manhattan / Minkowski';
+    } else {
+      settingsMetric.textContent = 'Metric: Euclidean / Manhattan / Minkowski';
+    }
+  }
+
+  function recomputeAll() {
+    const e = fillEuclideanTable();
+    const m = fillManhattanTable();
+    const mk = fillMinkowskiTable();
+
+    applyHighlightsForStep(currentStep, e.nearest, m.nearest, mk.nearest);
+    updateVoteSummary(e.nearest, m.nearest, mk.nearest);
+  }
+
+  // INITIALISE
+  function updateKUI() {
+    const kVal = getK();
+    kValueSpan.textContent = kVal;
+    settingsK.textContent = 'k = ' + kVal;
+  }
+
+  updateKUI();
+  if (pSlider && pValueSpan) {
+    pValueSpan.textContent = parseFloat(pSlider.value).toFixed(1);
+  }
+
+  kSlider.addEventListener('input', () => {
+    updateKUI();
+    recomputeAll();
+  });
+
+  if (pSlider) {
+    pSlider.addEventListener('input', () => {
+      pValueSpan.textContent = parseFloat(pSlider.value).toFixed(1);
+      recomputeAll();
+    });
+  }
+
+  // STEP NAVIGATION
+  const stepButtons = Array.from(document.querySelectorAll('.step-pill'));
+  const steps = Array.from(document.querySelectorAll('.step'));
+  const prevBtn = document.getElementById('prevStep');
+  const nextBtn = document.getElementById('nextStep');
+
+  function showStep(n) {
+    currentStep = n;
+    steps.forEach((s, i) => {
+      s.classList.toggle('active', i === n - 1);
+    });
+    stepButtons.forEach((b, i) => {
+      b.classList.toggle('active', i === n - 1);
+    });
+    prevBtn.disabled = n === 1;
+    nextBtn.textContent = n === steps.length ? 'Finish' : 'Next →';
+    if (currentStepLabel) currentStepLabel.textContent = stepNames[n - 1];
+
+    recomputeAll();
+  }
+
+  stepButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const n = parseInt(btn.dataset.step, 10);
+      showStep(n);
+    });
+  });
+
+  prevBtn.addEventListener('click', () => {
+    if (currentStep > 1) showStep(currentStep - 1);
+  });
+
+  nextBtn.addEventListener('click', () => {
+    if (currentStep < steps.length) {
+      showStep(currentStep + 1);
+    } else {
+      showStep(1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+
+  // first render
+  showStep(1);
+</script>
+</body>
+</html>
