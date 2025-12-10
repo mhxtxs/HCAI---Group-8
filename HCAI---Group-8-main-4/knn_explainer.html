@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FlowerLens – Explainable KNN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="knn_explainer.css">
+
+  <style>
+    /* Embedded heatmap styling */
+    .heatmap-explain-wrapper {
+      display: flex;
+      gap: 20px;
+      margin-top: 14px;
+    }
+    .heatmap-img {
+      width: 230px;
+      height: 230px;
+      border-radius: 14px;
+      object-fit: cover;
+      border: 2px solid rgba(255,255,255,0.25);
+    }
+    /* 🔥 similarity text */
+    #similarityExplain {
+      margin-top: 8px;
+      font-weight: 600;
+      color: #0ea5e9;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <!-- Fake tab bar -->
+  <nav class="tab-bar" aria-label="Main sections">
+    <button class="tab-btn">Ask FlowerLens</button>
+    <button class="tab-btn active">Model training data & explanation</button>
+  </nav>
+
+  <!-- Top controls -->
+  <section class="settings-card">
+    <div class="settings-left">
+      <h2 class="settings-title">Current KNN settings</h2>
+      <p class="settings-line">
+        <span id="settingsK" class="pill pill-strong">k = 5</span>
+        <span id="settingsMetric" class="pill">Metric: Euclidean / Manhattan / Minkowski</span>
+      </p>
+      <p class="settings-caption">
+        These settings control how many neighbours vote and how we measure distances.
+      </p>
+    </div>
+
+    <div class="settings-right">
+      <div class="control-group">
+        <label for="kSlider">Number of neighbours (k)</label>
+        <div class="control-row">
+          <input id="kSlider" type="range" min="1" max="9" step="2" value="5">
+          <span id="kValue" class="slider-value">5</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="pSlider">Minkowski order p</label>
+        <div class="control-row">
+          <input id="pSlider" type="range" min="1" max="3" step="0.1" value="2">
+          <span id="pValue" class="slider-value">2.0</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main content -->
+  <main class="content-grid">
+
+    <!-- Left column -->
+    <section class="left-column">
+
+      <!-- ⭐⭐ HEATMAP SECTION ⭐⭐ -->
+      <section class="step-card" id="heatmap-explain-card">
+        <h2>Heatmap Visual Explanation</h2>
+        <p>This heatmap highlights important visual regions used in KNN similarity.</p>
+
+        <div class="heatmap-explain-wrapper">
+          <img id="explainOriginalImage" class="heatmap-img" src="" alt="Original Flower">
+          <div style="display:flex; flex-direction:column; align-items:center;">
+            <img id="explainHeatmapImage" class="heatmap-img" src="" alt="Heatmap">
+            <!-- 🔥 NEW similarity -->
+            <p id="similarityExplain"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- KNN steps card -->
+      <div class="step-card">
+
+        <div class="stepper-header">
+          <span class="stepper-label">KNN explanation steps</span>
+          <div class="stepper" aria-label="KNN steps">
+            <button class="step-pill active" data-step="1">1</button>
+            <button class="step-pill" data-step="2">2</button>
+            <button class="step-pill" data-step="3">3</button>
+            <button class="step-pill" data-step="4">4</button>
+            <button class="step-pill" data-step="5">5</button>
+          </div>
+        </div>
+
+        <section class="step step-1 active">
+          <h2>Step 1 – Overview</h2>
+          <p>The coloured points represent training flowers...</p>
+        </section>
+
+        <section class="step step-2">
+          <h2>Step 2 – Euclidean distance</h2>
+          <div class="table-wrap">
+            <table class="dist-table" id="table-euclidean">
+              <thead>
+                <tr><th>#</th><th>Class</th><th>x</th><th>y</th><th>Δx</th><th>Δy</th><th>d</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="step step-3">
+          <h2>Step 3 – Manhattan distance</h2>
+          <div class="table-wrap">
+            <table class="dist-table" id="table-manhattan">
+              <thead>
+                <tr><th>#</th><th>Class</th><th>x</th><th>y</th><th>|dx|</th><th>|dy|</th><th>d</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="step step-4">
+          <h2>Step 4 – Minkowski distance</h2>
+          <div class="table-wrap">
+            <table class="dist-table" id="table-minkowski">
+              <thead>
+                <tr><th>#</th><th>Class</th><th>x</th><th>y</th><th>d</th><th>Nearest?</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="step step-5">
+          <h2>Step 5 – Majority vote</h2>
+          <div id="voteSummary" class="decision-summary"></div>
+        </section>
+
+        <div class="step-nav">
+          <button id="prevStep" class="btn-secondary">← Previous</button>
+          <button id="nextStep" class="btn-primary">Next →</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Right column -->
+    <section class="right-column">
+      <div class="plot-card">
+        <div class="plot-header-top">
+          <span class="plot-badge">Model view</span>
+          <span id="currentStepLabel" class="plot-step-label">Step 1 of 5 – Overview</span>
+        </div>
+
+        <div class="plot" id="plotCanvas">
+          <div class="star" id="queryPoint" style="left:60%; top:50%;">★</div>
+
+          <div class="legend">
+            <div><span class="dot dot-setosa"></span> Setosa</div>
+            <div><span class="dot dot-versicolor"></span> Versicolor</div>
+            <div><span class="dot dot-virginica"></span> Virginica</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ================= HEATMAP AUTO–LOADER ================= -->
+<script>
+  window.addEventListener("load", () => {
+    const original = localStorage.getItem("flower_original");
+    const heatmap = localStorage.getItem("flower_heatmap");
+    const sim = localStorage.getItem("flower_similarity");
+
+    if (original)
+      document.getElementById("explainOriginalImage").src = original;
+
+    if (heatmap)
+      document.getElementById("explainHeatmapImage").src = heatmap;
+
+    if (sim)
+      document.getElementById("similarityExplain").textContent = `Similarity: ${sim}%`;
+  });
+</script>
+
+<!-- Your existing JS continues below -->
+<script>
+  window.updateHeatmap = function(original, heatmap) {
+    document.getElementById("explainOriginalImage").src = original;
+    document.getElementById("explainHeatmapImage").src = heatmap;
+  };
+</script>
+
+</body>
+</html>

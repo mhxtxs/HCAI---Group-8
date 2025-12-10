@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>KNN Flower Classifier – Explainable Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+  <!-- Inline styles for the heatmap card -->
+  <style>
+    body {
+      background-image: url("{{ url_for('static', filename='images/bg_img.jpg') }}");
+      background-size: cover !important;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+    .heatmap-pair {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .heatmap-col {
+      flex: 1 1 220px;
+    }
+    .heatmap-col h4 {
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+    .heatmap-img {
+      width: 100%;
+      max-width: 260px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      object-fit: cover;
+      display: block;
+    }
+    .similarity-label {
+      margin-top: 6px;
+      font-weight: 600;
+      color: #0ea5e9;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="app-root">
+
+    <!-- ================= HERO ================= -->
+    <header class="hero">
+      <div class="hero-text">
+        <h1 class="hero-title">FlowerLens</h1>
+        <p class="hero-subtitle">
+          FlowerLens is built on the K-Nearest Neighbours (KNN) algorithm. With our tool you can
+          transparently see how the algorithm works. Take a picture of a flower,
+          upload it, and FlowerLens will show you which flowers in the training data are most similar.
+        </p>
+
+        <ul class="hero-list">
+          <li>Upload your own flower image and receive the name of the flower.</li>
+          <li>Inspect the training dataset, add or remove images, and click individual data points.</li>
+          <li>Adjust KNN parameters and see how they influence the result.</li>
+        </ul>
+      </div>
+
+      <div class="hero-image">
+        <div class="hero-image-main">
+          <img src="{{ url_for('static', filename='flower_tool.png') }}">
+        </div>
+      </div>
+    </header>
+
+    <!-- ================= VIEW TOGGLE ================= -->
+    <section class="view-toggle">
+      <button class="view-tab active" data-target="view-assistant">
+        Ask FlowerLens
+      </button>
+      <button class="view-tab" data-target="view-dataset">
+        Model training data & Explanation of the algorithm
+      </button>
+    </section>
+
+    <!-- ====================================================================== -->
+    <!--                                VIEW: CHAT                             -->
+    <!-- ====================================================================== -->
+    <section id="view-assistant" class="app-view active">
+      <section class="main-area">
+
+        <!-- ========= CHAT PANEL ========= -->
+        <section class="chat-panel">
+          <div class="chat-header">
+            <h2>Ask FlowerLens</h2>
+          </div>
+
+          <!-- Small settings summary -->
+          <div class="settings-summary" id="settings-summary">
+            <span class="summary-label">Current KNN settings</span>
+            <span class="summary-value" id="summary-k">k = 5</span>
+            <span class="summary-dot">·</span>
+            <span class="summary-value" id="summary-metric">Metric: Euclidean</span>
+          </div>
+
+          <div class="chat-window" id="chat-window">
+            <div class="chat-message bot">
+              <div class="chat-bubble">
+                Hi! Upload a flower image and I'll tell you what species it may be.
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-row">
+            <button id="chat-upload-btn" class="btn-upload highlighted-upload">
+              <span class="upload-icon">📷</span>
+              <span class="upload-label">Upload flower image</span>
+            </button>
+            <input type="text" id="chat-input" class="chat-input" placeholder="Ask me something…" />
+            <button id="chat-send" class="btn-primary">Send</button>
+
+            <input type="file" id="file-input" accept="image/*" hidden />
+          </div>
+
+          <!-- Preview UNDER upload button -->
+          <div id="pending-preview" style="margin-top: 10px; text-align:center;"></div>
+
+          <p class="chat-hint">
+            First upload a flower image, then you can ask questions about the prediction.
+          </p>
+        </section>
+
+        <!-- ========= RIGHT SIDE: SETTINGS ======== -->
+        <aside class="side-panel">
+          <section class="side-card">
+            <h2 class="side-title">Settings for the KNN Algorithm</h2>
+
+            <!-- K -->
+            <div class="param-group">
+              <label for="k-slider">
+                Number of neighbours <span class="badge" id="k-value">5</span>
+              </label>
+              <input id="k-slider" type="range" min="1" max="25" step="1" value="5" />
+              <p class="param-help">
+                <strong>k</strong> controls how many neighbours vote.  
+                Small k → sensitive to noise.  
+                Large k → smoother but less detailed.
+              </p>
+            </div>
+
+            <!-- Distance metric -->
+            <div class="param-group">
+              <label for="metric-select">Distance metric</label>
+              <select id="metric-select">
+                <option value="euclidean">Euclidean distance</option>
+                <option value="manhattan">Manhattan distance</option>
+                <option value="minkowski">Minkowski distance (p-th order)</option>
+              </select>
+              <p id="metric-description" class="param-help">
+                Euclidean distance measures straight-line distance like with a ruler.
+              </p>
+            </div>
+
+            <p class="param-note">
+              The chat also uses these exact settings when making predictions.
+            </p>
+          </section>
+        </aside>
+
+      </section>
+    </section>
+
+    <!-- =========================================================================== -->
+    <!--                         VIEW: DATASET + EXPLAINABILITY                      -->
+    <!-- =========================================================================== -->
+    <section id="view-dataset" class="app-view">
+
+      <section class="dataset-intro-card">
+        <h2>Training data used by the KNN model</h2>
+
+        <div class="settings-summary settings-summary-compact">
+          <span class="summary-label">Current KNN settings</span>
+          <span class="summary-value" id="summary-k-2">k = 5</span>
+          <span class="summary-dot">·</span>
+          <span class="summary-value" id="summary-metric-2">Metric: Euclidean</span>
+        </div>
+
+        <p>
+          These are the flowers the model compares your uploaded image to.
+        </p>
+
+        <ul>
+          <li>Click a point or row to inspect it.</li>
+          <li>Add or remove images to understand how the model adapts.</li>
+          <li>Changing k or the distance metric changes the nearest neighbours.</li>
+        </ul>
+
+        <p class="param-note">
+          Think of this as the model’s <strong>memory</strong>.
+        </p>
+      </section>
+
+      <!-- ========================= DATASET & PLOT ========================== -->
+      <section class="dataset-area">
+
+        <!-- PLOT -->
+        <article class="plot-card">
+          <h2>Dataset in feature space</h2>
+          <p class="plot-caption">
+            Each dot is a flower from the training dataset.  
+            The uploaded flower appears as a turquoise star.
+          </p>
+
+          <div id="dataset-scatter" class="plot"></div>
+
+          <p class="plot-legend-note">
+            <strong>Legend:</strong>  
+            Coloured dots = training flowers  
+            Turquoise star = uploaded flower  
+            Gold ring = current k nearest neighbours
+          </p>
+        </article>
+
+        <!-- DATASET EXPLORER -->
+        <article class="plot-card">
+          <h2>Dataset explorer</h2>
+
+          <p class="plot-caption">
+            Add, remove or inspect flowers in the training dataset.
+          </p>
+
+          <div class="dataset-controls">
+            <div class="filter-group">
+              <label for="class-filter">Filter by class:</label>
+              <select id="class-filter">
+                <option value="all">All classes</option>
+                <option value="setosa">Setosa</option>
+                <option value="versicolor">Versicolor</option>
+                <option value="virginica">Virginica</option>
+              </select>
+            </div>
+
+            <div class="dataset-buttons">
+              <button class="btn-secondary" id="btn-add-image">Add new image</button>
+              <button class="btn-secondary" id="btn-remove-image" disabled>Remove selected image</button>
+            </div>
+          </div>
+
+          <input type="file" id="dataset-file-input" accept="image/*" hidden />
+
+          <div class="table-wrap">
+            <table class="data-table" id="dataset-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Id</th>
+                  <th>Class</th>
+                  <th>Source</th>
+                  <th>In training</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <p class="note">
+            Clicking a row or dot shows details here:
+          </p>
+
+          <div id="point-details" class="point-details">
+            <p>No point selected yet. Click a dot or row.</p>
+          </div>
+        </article>
+      </section>
+
+      <!-- ===================== HEATMAP EXPLAINER CARD ====================== -->
+      <section class="plot-card" id="heatmap-explainer-card">
+        <h2>Heatmap visual explanation</h2>
+        <p class="plot-caption">
+          Left: your uploaded flower. Right: a gradient-based heatmap showing visually important regions.
+        </p>
+        <div class="heatmap-pair">
+          <div class="heatmap-col">
+            <h4>Original image</h4>
+            <img id="explainOriginalImage" class="heatmap-img" src="" alt="Original flower">
+          </div>
+          <div class="heatmap-col">
+            <h4>Heatmap</h4>
+            <img id="explainHeatmapImage" class="heatmap-img" src="" alt="Heatmap overlay">
+            <p id="similarityText" class="similarity-label"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- (Explainability long text sections – unchanged, omitted here for brevity if you want,
+           but you can keep all your existing neighbour influence / distance explanations) -->
+
+      <!-- =========================== EXPLAINABILITY =============================== -->
+      <section class="distance-card" id="distance-explanation">
+        <h2>Distance measures, neighbour selection & class vote</h2>
+        <p>
+          The model measures how far each training flower is from the uploaded one.
+          Different distance metrics define “closeness” differently.
+        </p>
+
+        <div class="stepper distance-stepper">
+          <button class="step-pill distance-tab active" data-metric="euclidean">Euclidean</button>
+          <button class="step-pill distance-tab" data-metric="manhattan">Manhattan</button>
+          <button class="step-pill distance-tab" data-metric="minkowski">Minkowski</button>
+        </div>
+
+        <div class="distance-panel exp-panel active" data-metric-panel="euclidean">
+          <h3>Euclidean distance (straight line)</h3>
+          <p>The standard ruler distance:</p>
+          <div class="formula-box">
+            d = √[(x − x★)² + (y − y★)²]
+          </div>
+          <p>Highlighted rows below represent the current k nearest neighbours.</p>
+        </div>
+
+        <div class="distance-panel exp-panel" data-metric-panel="manhattan">
+          <h3>Manhattan distance (grid)</h3>
+          <p>Moves only horizontally/vertically:</p>
+          <div class="formula-box">
+            d = |x − x★| + |y − y★|
+          </div>
+          <p>Rows highlighted in gold are the nearest neighbours.</p>
+        </div>
+
+        <div class="distance-panel exp-panel" data-metric-panel="minkowski">
+          <h3>Minkowski distance (p-th order)</h3>
+          <p>A general version of both Euclidean and Manhattan:</p>
+          <div class="formula-box">
+            d = ( |x−x★|<sup>p</sup> + |y−y★|<sup>p</sup> )<sup>1/p</sup>
+          </div>
+
+          <div class="minkowski-row">
+            <label for="p-slider">Minkowski order p</label>
+            <div class="p-slider-wrap">
+              <input type="range" id="p-slider" min="1" max="5" step="0.1" value="2" />
+              <span id="p-value">p = 2.0</span>
+            </div>
+            <p class="param-help">
+              p = 1 → Manhattan  
+              p = 2 → Euclidean  
+              Values in between blend both effects.
+            </p>
+          </div>
+        </div>
+
+        <div class="distance-table-wrap">
+          <table class="data-table distance-table" id="distance-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Id</th>
+                <th>Class</th>
+                <th>x</th>
+                <th>y</th>
+                <th>Δx</th>
+                <th>Δy</th>
+                <th>d</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="majority-overview">
+        <h3>Majority vote & final decision</h3>
+        <p>
+          Once distances are computed, the model selects the <strong>k</strong> nearest neighbours
+          and counts the classes among them. The class with the highest count is the prediction.
+        </p>
+
+        <p class="vote-summary" id="vote-summary"></p>
+      </section>
+
+      <section class="vote-details">
+        <div class="how-read-box">
+          <h3>How to read the vote summary</h3>
+          <p>
+            Each flower in the training set “votes” for a class. The <strong>k nearest neighbours</strong> 
+            are the only ones allowed to vote.
+          </p>
+          <ul class="read-list">
+            <li>🌼 <strong>Setosa</strong> → votes from flowers with similar small petals.</li>
+            <li>🌼<strong>Versicolor</strong> → medium-sized flowers contribute here.</li>
+            <li>🌼 <strong>Virginica</strong> → larger flowers influence this class.</li>
+          </ul>
+          <p>
+            The species with the <strong>highest number of votes</strong> becomes the predicted flower.
+            If the votes are close, confidence will be lower.
+          </p>
+          <p class="read-note">
+            Confidence = (Votes for predicted class ÷ k) × 100  
+          </p>
+        </div>
+      </section>
+      <!-- ====================================================================== -->
+<!--                     NEIGHBOUR INFLUENCE EXPLANATION                    -->
+<!-- ====================================================================== -->
+<section class="explainability-deep-card">
+  <h2>Understanding Neighbour Influence in KNN</h2>
+
+  <p>
+    The K-Nearest Neighbours (KNN) algorithm compares the uploaded flower with
+    every flower in the training dataset, selects the closest neighbours, and
+    predicts the class that appears most frequently among them. However, not all 
+    neighbours contribute equally. To make this transparent, FlowerLens introduces
+    a <strong>Neighbour Influence Heatmap</strong> that reveals how much each 
+    neighbour affects the prediction.
+  </p>
+
+  <h3>Why Influence Matters</h3>
+  <p>
+    Even within the top <em>k</em> neighbours, distance varies. A flower extremely 
+    close to the uploaded image contributes more strongly than one barely in the 
+    top <em>k</em>. The heatmap visualises this difference by assigning each 
+    neighbour a weighted influence score.
+  </p>
+
+  <h3>How Influence is Calculated</h3>
+  <p>For each neighbour in the top <em>k</em>:</p>
+
+  <div class="formula-box">
+    Influence = 1 / distance
+  </div>
+
+  <p>This ensures:</p>
+  <ul>
+    <li>Close neighbours have high influence</li>
+    <li>Farther neighbours have lower influence</li>
+    <li>Influence changes smoothly with distance</li>
+  </ul>
+
+  <p>The influence is then normalised:</p>
+  <div class="formula-box">
+    Normalised Influence = Influence / Max Influence
+  </div>
+</section>
+
+<section class="explainability-deep-card2">
+  <h3>Visual Encoding: Colour Heatmap Bars</h3>
+  <p>Influence is mapped to colour-coded bars:</p>
+
+  <ul>
+    <li style="color:#22c55e;"><strong>Green</strong> → High influence (closest neighbours)</li>
+    <li style="color:#eab308;"><strong>Yellow</strong> → Medium influence</li>
+    <li style="color:#ef4444;"><strong>Red</strong> → Low influence (far neighbours)</li>
+  </ul>
+
+  <p>
+    Bars animate according to influence score, making KNN easy to understand even
+    for non-technical users.
+  </p>
+
+  <h3>Educational Value</h3>
+  <p>This module reveals:</p>
+  <ul>
+    <li>Which samples matter most</li>
+    <li>How distance affects classification</li>
+    <li>The effect of adjusting <em>k</em></li>
+    <li>Differences between Euclidean, Manhattan, and Minkowski metrics</li>
+    <li>Impact of noisy or mislabeled data</li>
+  </ul>
+
+  <h3>Conclusion</h3>
+  <p>
+    The Neighbour Influence Heatmap transforms KNN from “upload → predict”
+    into a transparent, explainable learning tool.
+  </p>
+</section>
+
+    </section> <!-- END VIEW DATASET -->
+
+  </main>
+
+  <!-- =========================================================================== -->
+  <!--                               JAVASCRIPT LOGIC                              -->
+  <!-- =========================================================================== -->
+  <script>
+    /* --------------------------------------------------------------
+       DATASET
+    -------------------------------------------------------------- */
+    const datasetPoints = [
+      { id: 1, label: 'iris setosa', x: 1.2, y: 0.8, source: 'Original dataset', inTraining: true, image: 'static/images/iris_setosa.jpg',
+        features: { sepal_length: 5.1, sepal_width: 3.5, petal_length: 1.4, petal_width: 0.2 } },
+      { id: 2, label: 'alcea setosa', x: 1.4, y: 1.0, source: 'Original dataset', inTraining: true, image: 'static/images/alcea_setosa.jpg',
+        features: { sepal_length: 4.9, sepal_width: 3.0, petal_length: 1.4, petal_width: 0.2 } },
+      { id: 3, label: 'echeveria setosa', x: 1.0, y: 0.9, source: 'Original dataset', inTraining: true, image: 'static/images/echeveria_setosa.jpg',
+        features: { sepal_length: 4.7, sepal_width: 3.2, petal_length: 1.3, petal_width: 0.2 } },
+      { id: 4, label: 'oxalis versicolor', x: 3.1, y: 2.2, source: 'Original dataset', inTraining: true, image: 'static/images/oxalis_versicolor.jpg',
+        features: { sepal_length: 6.2, sepal_width: 2.8, petal_length: 4.8, petal_width: 1.8 } },
+      { id: 5, label: 'sumpfiris iris versicolor', x: 2.9, y: 2.0, source: 'Original dataset', inTraining: true, image: 'static/images/sumpfiris_iris_versicolor.jpg',
+        features: { sepal_length: 6.0, sepal_width: 2.7, petal_length: 4.5, petal_width: 1.5 } },
+      { id: 6, label: 'clematis versicolor', x: 3.3, y: 2.4, source: 'Original dataset', inTraining: true, image: 'static/images/clematis_versicolor.jpg',
+        features: { sepal_length: 5.9, sepal_width: 2.9, petal_length: 4.2, petal_width: 1.5 } },
+      { id: 7, label: 'iris virginica', x: 4.0, y: 3.1, source: 'Original dataset', inTraining: true, image: 'static/images/iris_virginica.jpg',
+        features: { sepal_length: 7.2, sepal_width: 3.0, petal_length: 6.0, petal_width: 2.0 } },
+      { id: 8, label: 'mertensia virginica', x: 4.3, y: 3.4, source: 'Original dataset', inTraining: true, image: 'static/images/mertensia_virginica.jpg',
+        features: { sepal_length: 6.5, sepal_width: 3.0, petal_length: 5.5, petal_width: 2.1 } },
+      { id: 9, label: 'itea virginica', x: 3.8, y: 2.9, source: 'Original dataset', inTraining: true, image: 'static/images/itea_virginica.jpg',
+        features: { sepal_length: 6.7, sepal_width: 3.1, petal_length: 5.6, petal_width: 2.4 } }
+    ];
+
+    function colorForLabel(label) {
+      const l = label.toLowerCase();
+      if (l.includes('setosa')) return 'rgba(56,189,248,0.9)';
+      if (l.includes('versicolor')) return 'rgba(34,197,94,0.9)';
+      if (l.includes('virginica')) return 'rgba(244,114,182,0.9)';
+      return 'rgba(148,163,184,0.9)';
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&quot;', "'": '&#39;' }[c])
+      );
+    }
+
+    let minkowskiP = 2.0;
+    function distance2D(a, b, metric) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      if (metric === 'manhattan') return Math.abs(dx) + Math.abs(dy);
+      if (metric === 'minkowski') {
+        const p = minkowskiP;
+        return Math.pow(Math.pow(Math.abs(dx), p) + Math.pow(Math.abs(dy), p), 1 / p);
+      }
+      return Math.hypot(dx, dy);
+    }
+
+    /* ============================== VIEW TABS ============================== */
+    document.querySelectorAll('.view-tab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-tab').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const target = btn.dataset.target;
+        document.querySelectorAll('.app-view').forEach((v) => {
+          v.classList.toggle('active', v.id === target);
+        });
+      });
+    });
+
+    /* ============================ PARAMETER CONTROLS =========================== */
+    const kSlider = document.getElementById('k-slider');
+    const kValueBadge = document.getElementById('k-value');
+    const metricSelect = document.getElementById('metric-select');
+    const metricDescription = document.getElementById('metric-description');
+    const summaryK = document.getElementById('summary-k');
+    const summaryMetric = document.getElementById('summary-metric');
+    const summaryK2 = document.getElementById('summary-k-2');
+    const summaryMetric2 = document.getElementById('summary-metric-2');
+
+    function updateSettingsSummary() {
+      const kText = `k = ${kSlider.value}`;
+      const metricName = metricSelect.options[metricSelect.selectedIndex].text.split(' ')[0];
+      summaryK.textContent = kText;
+      summaryMetric.textContent = `Metric: ${metricName}`;
+      summaryK2.textContent = kText;
+      summaryMetric2.textContent = `Metric: ${metricName}`;
+    }
+
+    kSlider.addEventListener('input', () => {
+      kValueBadge.textContent = kSlider.value;
+      updateSettingsSummary();
+      updateScatterHighlight();
+      updateDistanceTable();
+    });
+
+    metricSelect.addEventListener('change', () => {
+      const v = metricSelect.value;
+      metricDescription.textContent =
+        v === 'euclidean'
+          ? 'Euclidean distance measures straight-line distance, like a ruler.'
+          : v === 'manhattan'
+          ? 'Manhattan distance adds absolute differences along each feature.'
+          : 'Minkowski generalises both Euclidean (p=2) and Manhattan (p=1).';
+      updateSettingsSummary();
+      syncDistanceTabs(v);
+      updateScatterHighlight();
+      updateDistanceTable();
+    });
+
+    /* ============================= EXPLANATION TABS ============================= */
+    const distanceTabs = document.querySelectorAll('.distance-tab');
+    const distancePanels = document.querySelectorAll('.distance-panel');
+    function syncDistanceTabs(metric) {
+      distanceTabs.forEach((t) =>
+        t.classList.toggle('active', t.dataset.metric === metric)
+      );
+      distancePanels.forEach((p) =>
+        p.classList.toggle('active', p.dataset.metric-panel === metric)
+      );
+    }
+    distanceTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        metricSelect.value = tab.dataset.metric;
+        metricSelect.dispatchEvent(new Event('change'));
+      });
+    });
+
+    /* ================ MINKOWSKI SLIDER ================= */
+    const pSlider = document.getElementById('p-slider');
+    const pValueLabel = document.getElementById('p-value');
+    pSlider.addEventListener('input', () => {
+      minkowskiP = parseFloat(pSlider.value);
+      pValueLabel.textContent = `p = ${minkowskiP.toFixed(1)}`;
+      updateScatterHighlight();
+      updateDistanceTable();
+    });
+
+    /* ================================ CHAT ==================================== */
+    const chatWindow = document.getElementById('chat-window');
+    const similarityText = document.getElementById('similarityText');
+
+    function addChatMessage(content, sender = 'user', isHTML = false) {
+      const wrap = document.createElement('div');
+      wrap.classList.add('chat-message', sender);
+      const bubble = document.createElement('div');
+      bubble.classList.add('chat-bubble');
+      if (isHTML) bubble.innerHTML = content;
+      else bubble.textContent = content;
+      wrap.appendChild(bubble);
+      chatWindow.appendChild(wrap);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    async function sendToBackend(message) {
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        if (data.reply) addChatMessage(data.reply, 'bot');
+        else addChatMessage('Server returned no reply.', 'bot');
+      } catch {
+        addChatMessage('Error contacting backend.', 'bot');
+      }
+    }
+
+    async function sendImageToBackend(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('k', kSlider.value);
+      formData.append('metric', metricSelect.value);
+      formData.append('p', pSlider.value);
+
+      try {
+        const res = await fetch('/api/predict', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (data.prediction && data.class) {
+          const emoji =
+            data.class === 'Setosa' ? '🌸' :
+            data.class === 'Versicolor' ? '🌸' :
+            data.class === 'Virginica' ? '🌼' : '🌻';
+
+          const summaryHtml = data.summary
+            ? data.summary.split('\n').map(line => escapeHtml(line)).join('<br>')
+            : '';
+
+          addChatMessage(
+            `
+            <div>
+              <div>${escapeHtml(data.prediction)}</div>
+              <br>
+              <div><strong>${emoji} ${escapeHtml(data.class)}</strong></div>
+              <div>${summaryHtml}</div>
+            </div>
+            `,
+            'bot',
+            true
+          );
+        }
+
+        if (typeof data.similarity === 'number') {
+          similarityText.textContent = `Similarity to closest flower: ${data.similarity}%`;
+        }
+
+        return data;
+      } catch {
+        addChatMessage('Error sending image to backend.', 'bot');
+        return null;
+      }
+    }
+
+    document.getElementById('chat-send').addEventListener('click', async () => {
+      const msg = document.getElementById('chat-input').value.trim();
+      if (!msg && !pendingImageFile) return;
+
+      // Add user text message (if any)
+      if (msg) {
+        addChatMessage(msg, 'user');
+        document.getElementById('chat-input').value = '';
+      }
+
+      // If user uploaded an image → NOW send it, and do NOT also call /api/chat for this turn
+      if (pendingImageFile) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          addChatMessage(
+            `<div class="image-message">
+               <img src="${ev.target.result}" class="chat-image-preview"/>
+               <div class="image-caption">Uploaded image</div>
+             </div>`,
+            'user',
+            true
+          );
+        };
+        reader.readAsDataURL(pendingImageFile);
+
+        const predictionData = await sendImageToBackend(pendingImageFile);
+
+        document.getElementById('pending-preview').innerHTML = '';
+        pendingImageFile = null;
+
+        if (predictionData?.coords) {
+          setQueryPointFromBackend(predictionData.coords);
+        }
+        if (predictionData?.original_image) {
+          document.getElementById('explainOriginalImage').src =
+            predictionData.original_image;
+        }
+        if (predictionData?.heatmap_image) {
+          document.getElementById('explainHeatmapImage').src =
+            predictionData.heatmap_image;
+        }
+
+        // Stop here – no /api/chat call for this message
+        return;
+      }
+
+      // No image → normal chat
+      if (msg) {
+        sendToBackend(msg);
+      }
+    });
+
+    document.getElementById('chat-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('chat-send').click();
+      }
+    });
+
+    /* ================= IMAGE UPLOAD / QUERY POINT ===================== */
+    let queryPoint = null;
+    let pendingImageFile = null;
+
+    const uploadBtn = document.getElementById('chat-upload-btn');
+    const fileInput = document.getElementById('file-input');
+
+    uploadBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      pendingImageFile = file;
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        document.getElementById('pending-preview').innerHTML = `
+          <img src="${ev.target.result}"
+               style="width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid #4ade80;">
+          <p style="margin-top:5px; font-size:0.85rem; color:#4ade80;">
+            Image ready. Type a question and press Send.
+          </p>
+        `;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function setQueryPointFromBackend(coords) {
+      if (!coords) return;
+      queryPoint = { x: coords[0], y: coords[1] };
+      updateQueryTrace();
+      updateScatterHighlight();
+    }
+
+    /* =========================== DATASET TABLE ================================== */
+    const datasetTableBody = document.querySelector('#dataset-table tbody');
+    const classFilter = document.getElementById('class-filter');
+    const removeBtn = document.getElementById('btn-remove-image');
+    const addBtn = document.getElementById('btn-add-image');
+    const datasetFileInput = document.getElementById('dataset-file-input');
+    const pointDetailsDiv = document.getElementById('point-details');
+
+    let selectedRowId = null;
+
+    function renderDatasetTable() {
+      const filter = classFilter.value;
+      datasetTableBody.innerHTML = '';
+      datasetPoints
+        .filter((p) => filter === 'all' || p.label.toLowerCase().includes(filter))
+        .forEach((p) => {
+          const tr = document.createElement('tr');
+          tr.dataset.id = p.id;
+          tr.innerHTML = `
+            <td>${p.image ? `<img src="${p.image}" class="thumb-img"/>` : ''}</td>
+            <td>${p.id}</td>
+            <td>${escapeHtml(p.label)}</td>
+            <td>${escapeHtml(p.source)}</td>
+            <td>${p.inTraining ? 'Yes' : 'No'}</td>
+          `;
+          tr.addEventListener('click', () => {
+            selectDatasetRow(p.id);
+            showPointDetails(p);
+          });
+          datasetTableBody.appendChild(tr);
+        });
+    }
+
+    classFilter.addEventListener('change', renderDatasetTable);
+
+    addBtn.addEventListener('click', () => datasetFileInput.click());
+    datasetFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const newId = Math.max(...datasetPoints.map((p) => p.id)) + 1;
+        const label = prompt('Enter a class for this flower:', 'new_flower') || 'new_flower';
+        const avgX = datasetPoints.reduce((s, p) => s + p.x, 0) / datasetPoints.length;
+        const avgY = datasetPoints.reduce((s, p) => s + p.y, 0) / datasetPoints.length;
+        const jitterX = (Math.random() - 0.5) * 0.7;
+        const jitterY = (Math.random() - 0.5) * 0.7;
+        datasetPoints.push({
+          id: newId,
+          label,
+          x: avgX + jitterX,
+          y: avgY + jitterY,
+          source: 'User upload',
+          inTraining: true,
+          image: ev.target.result,
+          features: { sepal_length: 0, sepal_width: 0, petal_length: 0, petal_width: 0 }
+        });
+        renderDatasetTable();
+        scatterInitialized = false;
+        Plotly.purge('dataset-scatter');
+        initScatterPlot();
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    });
+
+    removeBtn.addEventListener('click', () => {
+      if (selectedRowId == null) return;
+      const idx = datasetPoints.findIndex((p) => p.id === selectedRowId);
+      if (idx < 0) return;
+      datasetPoints.splice(idx, 1);
+      selectedRowId = null;
+      removeBtn.disabled = true;
+      renderDatasetTable();
+      scatterInitialized = false;
+      Plotly.purge('dataset-scatter');
+      initScatterPlot();
+      pointDetailsDiv.innerHTML = '<p>Point removed.</p>';
+    });
+
+    function selectDatasetRow(id) {
+      selectedRowId = id;
+      removeBtn.disabled = false;
+      document.querySelectorAll('#dataset-table tbody tr').forEach((tr) => {
+        tr.classList.toggle('active', Number(tr.dataset.id) === id);
+      });
+      updateScatterHighlight();
+    }
+
+    function showPointDetails(p) {
+      pointDetailsDiv.innerHTML = `
+        ${p.image ? `<img src="${p.image}" class="point-details-image"/>` : ''}
+        <p><strong>Id:</strong> ${p.id}</p>
+        <p><strong>Class:</strong> ${escapeHtml(p.label)}</p>
+        <p><strong>Source:</strong> ${escapeHtml(p.source)}</p>
+        <p><strong>Used in training:</strong> ${p.inTraining ? 'Yes' : 'No'}</p>
+      `;
+    }
+
+    /* ============================= SCATTER PLOT ============================= */
+    let scatterInitialized = false;
+
+    function initScatterPlot() {
+      const x = datasetPoints.map((p) => p.x);
+      const y = datasetPoints.map((p) => p.y);
+      const ids = datasetPoints.map((p) => p.id);
+      const labels = datasetPoints.map((p) => p.label);
+      const colors = datasetPoints.map((p) => colorForLabel(p.label));
+      const sizes = datasetPoints.map(() => 10);
+      const lineColors = datasetPoints.map(() => 'rgba(15,23,42,0.95)');
+      const lineWidths = datasetPoints.map(() => 1);
+
+      const minX = Math.min(...x);
+      const maxX = Math.max(...x);
+      const minY = Math.min(...y);
+      const maxY = Math.max(...y);
+      const padX = (maxX - minX) * 0.15 || 0.5;
+      const padY = (maxY - minY) * 0.15 || 0.5;
+
+      const tracePoints = {
+        x,
+        y,
+        mode: 'markers',
+        type: 'scatter',
+        marker: {
+          size: sizes,
+          color: colors,
+          line: { width: lineWidths, color: lineColors }
+        },
+        text: labels.map((l, i) => `Id: ${ids[i]}<br>Class: ${escapeHtml(l)}`),
+        hovertemplate: '%{text}<br>x: %{x}<br>y: %{y}<extra></extra>'
+      };
+
+      const traceQuery = {
+        x: queryPoint ? [queryPoint.x] : [],
+        y: queryPoint ? [queryPoint.y] : [],
+        mode: 'markers',
+        type: 'scatter',
+        marker: {
+          size: queryPoint ? 20 : 0,
+          symbol: 'star',
+          color: 'rgba(56,189,248,1)'
+        },
+        hoverinfo: 'skip'
+      };
+
+      Plotly.newPlot(
+        'dataset-scatter',
+        [tracePoints, traceQuery],
+        {
+          margin: { t: 10, r: 10, b: 40, l: 40 },
+          xaxis: { range: [minX - padX, maxX + padX] },
+          yaxis: { range: [minY - padY, maxY + padY] },
+          hovermode: 'closest',
+          showlegend: false
+        },
+        { responsive: true }
+      );
+
+      document.getElementById('dataset-scatter').on('plotly_click', (data) => {
+        const pt = data.points[0];
+        if (pt.curveNumber !== 0) return;
+        const idx = pt.pointIndex;
+        const point = datasetPoints[idx];
+        showPointDetails(point);
+        selectDatasetRow(point.id);
+      });
+
+      scatterInitialized = true;
+      updateScatterHighlight();
+    }
+
+    function updateQueryTrace() {
+      if (!scatterInitialized) return;
+      Plotly.restyle(
+        'dataset-scatter',
+        {
+          x: [queryPoint ? [queryPoint.x] : []],
+          y: [queryPoint ? [queryPoint.y] : []],
+          'marker.size': [queryPoint ? 20 : 0]
+        },
+        [1]
+      );
+    }
+
+    function baseClassJs(label) {
+      const l = label.toLowerCase();
+      if (l.includes('setosa')) return 'Setosa';
+      if (l.includes('versicolor')) return 'Versicolor';
+      if (l.includes('virginica')) return 'Virginica';
+      return 'Other';
+    }
+
+    function updateScatterHighlight() {
+      if (!scatterInitialized) return;
+      const metric = metricSelect.value;
+      const k = Number(kSlider.value);
+      const ref =
+        queryPoint ||
+        (selectedRowId ? datasetPoints.find((p) => p.id === selectedRowId) : null);
+
+      const colors = [];
+      const sizes = [];
+      const lineColors = [];
+      const lineWidths = [];
+      let nearestIds = [];
+
+      if (ref) {
+        const sorted = datasetPoints
+          .map((p) => ({
+            id: p.id,
+            d: distance2D(p, ref, metric)
+          }))
+          .sort((a, b) => a.d - b.d);
+        nearestIds = sorted.slice(0, k).map((o) => o.id);
+      }
+
+      datasetPoints.forEach((p, i) => {
+        colors[i] = colorForLabel(p.label);
+        sizes[i] = 10;
+        lineColors[i] = 'rgba(15,23,42,0.95)';
+        lineWidths[i] = 1;
+        if (nearestIds.includes(p.id)) {
+          sizes[i] = 18;
+          lineColors[i] = 'rgba(250,204,21,1)';
+          lineWidths[i] = 6;
+        }
+      });
+
+      Plotly.restyle(
+        'dataset-scatter',
+        {
+          'marker.color': [colors],
+          'marker.size': [sizes],
+          'marker.line.color': [lineColors],
+          'marker.line.width': [lineWidths]
+        },
+        [0]
+      );
+
+      updateQueryTrace();
+      updateDistanceTable();
+    }
+
+    /* ============================ DISTANCE TABLE ================================= */
+    const distanceTableBody = document.querySelector('#distance-table tbody');
+    const voteSummary = document.getElementById('vote-summary');
+
+    function updateDistanceTable() {
+      if (!distanceTableBody) return;
+      const metric = metricSelect.value;
+      const k = Number(kSlider.value);
+      const ref =
+        queryPoint ||
+        (selectedRowId ? datasetPoints.find((p) => p.id === selectedRowId) : null);
+
+      if (!ref) {
+        distanceTableBody.innerHTML = `
+          <tr><td colspan="8">Upload a flower or select a point to see distances.</td></tr>
+        `;
+        voteSummary.textContent = '';
+        return;
+      }
+
+      const rows = datasetPoints
+        .map((p) => {
+          const dx = p.x - ref.x;
+          const dy = p.y - ref.y;
+          const d = distance2D(p, ref, metric);
+          return { p, dx, dy, d };
+        })
+        .sort((a, b) => a.d - b.d);
+
+      const maxNeighbours = Math.min(k, rows.length);
+
+      distanceTableBody.innerHTML = rows
+        .map((r, i) => {
+          const isN = i < maxNeighbours;
+          return `
+            <tr class="${isN ? 'nearest-row' : ''}">
+              <td>${i + 1}</td>
+              <td>${r.p.id}</td>
+              <td>${escapeHtml(r.p.label)}</td>
+              <td>${r.p.x.toFixed(2)}</td>
+              <td>${r.p.y.toFixed(2)}</td>
+              <td>${r.dx.toFixed(2)}</td>
+              <td>${r.dy.toFixed(2)}</td>
+              <td>${r.d.toFixed(2)}</td>
+            </tr>
+          `;
+        })
+        .join('');
+
+      const classCounts = {};
+      rows.slice(0, maxNeighbours).forEach((r) => {
+        const cls = baseClassJs(r.p.label);
+        classCounts[cls] = (classCounts[cls] || 0) + 1;
+      });
+
+      const sorted = Object.entries(classCounts).sort((a, b) => b[1] - a[1]);
+      if (sorted.length === 0) {
+        voteSummary.textContent = '';
+        return;
+      }
+
+      const [winner, count] = sorted[0];
+      function classIcon(cls) {
+        cls = cls.toLowerCase();
+        if (cls.includes('setosa')) return '🌸';
+        if (cls.includes('versicolor')) return '🌸';
+        if (cls.includes('virginica')) return '🌼';
+        return '🌻';
+      }
+
+      const confidence = Math.round((count / maxNeighbours) * 100);
+      let confColor =
+        confidence >= 70 ? '#22c55e' :
+        confidence >= 40 ? '#eab308' :
+                           '#ef4444';
+      let confWidth = confidence + '%';
+      let explanation =
+        confidence >= 70 ? 'High confidence: most of the nearest neighbours agree.' :
+        confidence >= 40 ? 'Medium confidence: the neighbours are mixed.' :
+                           'Low confidence: the neighbours disagree.';
+
+      voteSummary.innerHTML = `
+        <div class="vote-card">
+          <div class="vote-line">
+            <strong>Confidence:</strong>
+            <span style="color:${confColor}; font-weight:600;">${confidence}%</span>
+          </div>
+          <div class="confidence-bar">
+            <div class="tooltip">${explanation}</div>
+            <div class="confidence-fill" style="width:${confWidth};"></div>
+          </div>
+          <div style="margin-top: 12px; font-size: 1rem;">
+            ${sorted.map(([cls, n]) => `${classIcon(cls)} ${cls}: <strong>${n}</strong>`).join(' · ')}
+          </div>
+          <div style="margin-top: 12px; font-size: 1.05rem;">
+            🌼 <strong>Prediction:</strong>
+            <span style="color:#38bdf8;">${winner}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    /* INITIALISE EVERYTHING */
+    renderDatasetTable();
+    initScatterPlot();
+    updateSettingsSummary();
+  </script>
+</body>
+</html>
