@@ -1300,9 +1300,11 @@ body.modal-open {
 }
 
 .compare-plot {
-  min-height: 280px;
   height: 360px;
+  min-height: 360px;
+  display: block;
 }
+
 
 .compare-result {
   padding: 10px 10px;
