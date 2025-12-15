@@ -211,13 +211,12 @@
           </p>
 
           <div id="dataset-scatter" class="plot"></div>
-
           <p class="plot-legend-note">
-            <strong>Legend:</strong>  
-            Coloured dots = training flowers  
-            Turquoise star = uploaded flower  
-            Gold ring = current k nearest neighbours
-          </p>
+             <strong>Legend:</strong><br>
+             Coloured dots = flowers from the training data set<br>
+             Turquoise star = uploaded flower<br>
+             Gold ring = current k nearest neighbours
+</p>
         </article>
 
         <!-- DATASET EXPLORER -->
@@ -514,9 +513,10 @@
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, (c) =>
-        ({ '&': '&amp;', '<': '&lt;', '>': '&quot;', "'": '&#39;' }[c])
-      );
-    }
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+    );
+  }
+
 
     let minkowskiP = 2.0;
     function distance2D(a, b, metric) {
@@ -539,8 +539,13 @@
         document.querySelectorAll('.app-view').forEach((v) => {
           v.classList.toggle('active', v.id === target);
         });
+
+        if (target === 'view-dataset') {
+          resizeScatterSoon();
+        }
       });
     });
+
 
     /* ============================ PARAMETER CONTROLS =========================== */
     const kSlider = document.getElementById('k-slider');
@@ -716,10 +721,18 @@
 
         document.getElementById('pending-preview').innerHTML = '';
         pendingImageFile = null;
+        fileInput.value = '';
 
         if (predictionData?.coords) {
-          setQueryPointFromBackend(predictionData.coords);
+          setQueryPointFromBackend(
+            predictionData.coords,
+            {
+              className: predictionData.class,
+              image: pendingImageDataUrl
+            }
+          );
         }
+
         if (predictionData?.original_image) {
           document.getElementById('explainOriginalImage').src =
             predictionData.original_image;
@@ -747,8 +760,11 @@
     });
 
     /* ================= IMAGE UPLOAD / QUERY POINT ===================== */
-    let queryPoint = null;
+    const CHAT_UPLOAD_ID = 0; 
+    let queryPoint = null;     
     let pendingImageFile = null;
+    let pendingImageDataUrl = null; 
+    let chatUploadEntry = null;     
 
     const uploadBtn = document.getElementById('chat-upload-btn');
     const fileInput = document.getElementById('file-input');
@@ -763,6 +779,7 @@
 
       const reader = new FileReader();
       reader.onload = (ev) => {
+        pendingImageDataUrl = ev.target.result;
         document.getElementById('pending-preview').innerHTML = `
           <img src="${ev.target.result}"
                style="width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid #4ade80;">
@@ -773,12 +790,24 @@
       };
       reader.readAsDataURL(file);
     });
-
-    function setQueryPointFromBackend(coords) {
+    
+    function setQueryPointFromBackend(coords, meta = {}) {
       if (!coords) return;
       queryPoint = { x: coords[0], y: coords[1] };
-      updateQueryTrace();
-      updateScatterHighlight();
+      chatUploadEntry = {
+        id: CHAT_UPLOAD_ID,
+        label: meta.className || 'Chat upload',
+        x: queryPoint.x,
+        y: queryPoint.y,
+        source: 'Chat upload',
+        inTraining: false,
+        image: meta.image || '',
+        features: { sepal_length: 0, sepal_width: 0, petal_length: 0, petal_width: 0 }
+      };
+      renderDatasetTable();
+      initScatterPlot();           
+      selectDatasetRow(CHAT_UPLOAD_ID);
+      showPointDetails(chatUploadEntry);
     }
 
     /* =========================== DATASET TABLE ================================== */
@@ -794,9 +823,10 @@
     function renderDatasetTable() {
       const filter = classFilter.value;
       datasetTableBody.innerHTML = '';
-      datasetPoints
-        .filter((p) => filter === 'all' || p.label.toLowerCase().includes(filter))
-        .forEach((p) => {
+      const allPoints = chatUploadEntry ? [chatUploadEntry, ...datasetPoints] : datasetPoints;
+      allPoints
+      .filter((p) => filter === 'all' || p.label.toLowerCase().includes(filter))
+      .forEach((p) => {
           const tr = document.createElement('tr');
           tr.dataset.id = p.id;
           tr.innerHTML = `
@@ -839,9 +869,9 @@
           features: { sepal_length: 0, sepal_width: 0, petal_length: 0, petal_width: 0 }
         });
         renderDatasetTable();
-        scatterInitialized = false;
-        Plotly.purge('dataset-scatter');
         initScatterPlot();
+        selectDatasetRow(newId);
+        showPointDetails(datasetPoints[datasetPoints.length - 1]);
       };
       reader.readAsDataURL(file);
       e.target.value = '';
@@ -849,26 +879,80 @@
 
     removeBtn.addEventListener('click', () => {
       if (selectedRowId == null) return;
+      if (selectedRowId === CHAT_UPLOAD_ID) {
+        chatUploadEntry = null;
+        queryPoint = null;
+        selectedRowId = null;
+        removeBtn.disabled = true;
+        removeBtn.textContent = 'Remove selected image';
+        pointDetailsDiv.innerHTML = '<p>No point selected yet. Click a dot or row.</p>';
+        renderDatasetTable();
+        initScatterPlot();
+        return;
+      }
+      
       const idx = datasetPoints.findIndex((p) => p.id === selectedRowId);
       if (idx < 0) return;
       datasetPoints.splice(idx, 1);
       selectedRowId = null;
       removeBtn.disabled = true;
       renderDatasetTable();
-      scatterInitialized = false;
-      Plotly.purge('dataset-scatter');
       initScatterPlot();
       pointDetailsDiv.innerHTML = '<p>Point removed.</p>';
     });
 
     function selectDatasetRow(id) {
       selectedRowId = id;
-      removeBtn.disabled = false;
+      const selectedPoint =
+      id === CHAT_UPLOAD_ID ? chatUploadEntry : datasetPoints.find((p) => p.id === id);
+      const isTraining = !!selectedPoint && (selectedPoint.inTraining !== false);
+      const canRemove = !!selectedPoint && (isTraining || id === CHAT_UPLOAD_ID);
+      removeBtn.disabled = !canRemove;
+      if (id === CHAT_UPLOAD_ID) {
+        removeBtn.textContent = 'Remove chat upload';
+      } else {
+        removeBtn.textContent = 'Remove selected image';
+      }
       document.querySelectorAll('#dataset-table tbody tr').forEach((tr) => {
         tr.classList.toggle('active', Number(tr.dataset.id) === id);
       });
       updateScatterHighlight();
+      if (id === CHAT_UPLOAD_ID) {
+        focusQueryInScatter();
+      } else {
+        const idx = datasetPoints.findIndex((p) => p.id === id);
+        if (idx >= 0) focusPointInScatter(idx);
+      }
     }
+
+
+  function focusPointInScatter(pointIndex) {
+  const plotEl = document.getElementById('dataset-scatter');
+  if (!plotEl || !scatterInitialized) return;
+  if (Plotly?.Fx?.hover) {
+    Plotly.Fx.hover(plotEl, [{ curveNumber: 0, pointNumber: pointIndex }]);
+  }
+  const p = datasetPoints[pointIndex];
+  const xr = plotEl.layout?.xaxis?.range;
+  const yr = plotEl.layout?.yaxis?.range;
+  if (!xr || !yr) return;
+
+  const padX = (xr[1] - xr[0]) * 0.08 || 0.5;
+  const padY = (yr[1] - yr[0]) * 0.08 || 0.5;
+
+  Plotly.relayout(plotEl, {
+    'xaxis.range': [Math.min(xr[0], p.x - padX), Math.max(xr[1], p.x + padX)],
+    'yaxis.range': [Math.min(yr[0], p.y - padY), Math.max(yr[1], p.y + padY)],
+  });
+}
+
+function focusQueryInScatter() {
+  const plotEl = document.getElementById('dataset-scatter');
+  if (!plotEl || !scatterInitialized || !queryPoint) return;
+  if (Plotly?.Fx?.hover) {
+    Plotly.Fx.hover(plotEl, [{ curveNumber: 1, pointNumber: 0 }]);
+  }
+}
 
     function showPointDetails(p) {
       pointDetailsDiv.innerHTML = `
@@ -882,6 +966,15 @@
 
     /* ============================= SCATTER PLOT ============================= */
     let scatterInitialized = false;
+    function resizeScatterSoon() {
+      requestAnimationFrame(() => {
+        const el = document.getElementById('dataset-scatter');
+        if (!el) return;
+        if (window.Plotly && Plotly.Plots && typeof Plotly.Plots.resize === 'function') {
+          Plotly.Plots.resize(el);
+        }
+      });
+    }
 
     function initScatterPlot() {
       const x = datasetPoints.map((p) => p.x);
@@ -893,10 +986,12 @@
       const lineColors = datasetPoints.map(() => 'rgba(15,23,42,0.95)');
       const lineWidths = datasetPoints.map(() => 1);
 
-      const minX = Math.min(...x);
-      const maxX = Math.max(...x);
-      const minY = Math.min(...y);
-      const maxY = Math.max(...y);
+      const xAll = queryPoint ? [...x, queryPoint.x] : x;
+      const yAll = queryPoint ? [...y, queryPoint.y] : y;
+      const minX = Math.min(...xAll);
+      const maxX = Math.max(...xAll);
+      const minY = Math.min(...yAll);
+      const maxY = Math.max(...yAll);
       const padX = (maxX - minX) * 0.15 || 0.5;
       const padY = (maxY - minY) * 0.15 || 0.5;
 
@@ -924,7 +1019,8 @@
           symbol: 'star',
           color: 'rgba(56,189,248,1)'
         },
-        hoverinfo: 'skip'
+        text: [chatUploadEntry ? `Chat upload` : 'Uploaded flower'],
+        hovertemplate: '%{text}<extra></extra>'
       };
 
       Plotly.newPlot(
@@ -942,16 +1038,23 @@
 
       document.getElementById('dataset-scatter').on('plotly_click', (data) => {
         const pt = data.points[0];
-        if (pt.curveNumber !== 0) return;
-        const idx = pt.pointIndex;
-        const point = datasetPoints[idx];
-        showPointDetails(point);
-        selectDatasetRow(point.id);
+        if (pt.curveNumber === 0) {
+          const idx = pt.pointIndex;
+          const point = datasetPoints[idx];
+          showPointDetails(point);
+          selectDatasetRow(point.id);
+          return;
+        }
+        if (pt.curveNumber === 1 && chatUploadEntry) {
+          showPointDetails(chatUploadEntry);
+          selectDatasetRow(CHAT_UPLOAD_ID);
+        }
       });
 
       scatterInitialized = true;
       updateScatterHighlight();
-    }
+      resizeScatterSoon();
+      }
 
     function updateQueryTrace() {
       if (!scatterInitialized) return;
@@ -986,6 +1089,7 @@
       const sizes = [];
       const lineColors = [];
       const lineWidths = [];
+      const symbols = [];
       let nearestIds = [];
 
       if (ref) {
@@ -1003,10 +1107,19 @@
         sizes[i] = 10;
         lineColors[i] = 'rgba(15,23,42,0.95)';
         lineWidths[i] = 1;
+        symbols[i] = 'circle';
+
         if (nearestIds.includes(p.id)) {
           sizes[i] = 18;
           lineColors[i] = 'rgba(250,204,21,1)';
           lineWidths[i] = 6;
+        }
+
+        if (selectedRowId != null && p.id === selectedRowId) {
+          symbols[i] = 'diamond';
+          sizes[i] = Math.max(sizes[i], 22);
+          lineColors[i] = 'rgba(56,189,248,1)';
+          lineWidths[i] = Math.max(lineWidths[i], 6);
         }
       });
 
@@ -1015,6 +1128,7 @@
         {
           'marker.color': [colors],
           'marker.size': [sizes],
+          'marker.symbol': [symbols],
           'marker.line.color': [lineColors],
           'marker.line.width': [lineWidths]
         },
