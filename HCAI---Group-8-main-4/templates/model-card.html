@@ -7,12 +7,12 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body class="modelcard-page">
-    <nav class="view-toggle modelcard-nav">
-      <a class="view-tab" href="{{ url_for('index') }}#view-assistant">· Ask FlowerLens</a>
-      <a class="view-tab" href="{{ url_for('index') }}#view-dataset">· Training data & feature space</a>
-      <a class="view-tab" href="{{ url_for('index') }}#distance-explanation">· Distances & neighbour vote</a>
-      <a class="view-tab active" aria-current="page" href="{{ url_for('model_card') }}">· Model card</a>
-    </nav>
+  <nav class="view-toggle modelcard-nav">
+    <a class="view-tab" href="{{ url_for('index') }}#view-assistant">· Ask FlowerLens</a>
+    <a class="view-tab" href="{{ url_for('index') }}#view-dataset">· Training data & feature space</a>
+    <a class="view-tab active" aria-current="page" href="{{ url_for('model_card') }}">· Model card</a>
+  </nav>
+
   <main class="container">
     <header class="page-header">
       <h1>Model Card</h1>

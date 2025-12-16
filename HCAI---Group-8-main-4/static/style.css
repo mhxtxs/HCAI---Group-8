@@ -241,15 +241,14 @@ main.app-root {
   text-shadow: 0 0 8px rgba(16, 185, 129, 0.9);
 }
 
-.app-view {
+.app-view{
   display: none;
   margin-top: 18px;
 }
 
-.app-view.active {
+.app-view.active{
   display: block;
 }
-
 /* =======================================================================
    STEP-GUIDE
 ======================================================================= */
@@ -1598,6 +1597,122 @@ body.modelcard-page{
   .modelcard-page .card-grid { grid-template-columns: 1fr; }
   .modelcard-page .container { padding: 34px 16px 54px; }
   .modelcard-page .page-header h1 { font-size: 32px; }
+}
+
+
+.result-card{
+  margin-top: 10px;
+  border-radius: 18px;
+  border: 1px solid rgba(148,163,184,0.22);
+  background: rgba(2,6,23,0.35);
+  padding: 12px;
+}
+.result-top{
+  display:flex;
+  justify-content: space-between;
+  gap:12px;
+  flex-wrap: wrap;
+}
+.result-label{
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(226,232,240,0.7);
+}
+.result-pred{
+  font-size: 1.2rem;
+  font-weight: 850;
+  color: #38bdf8;
+}
+.result-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.result-disclaimer{
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: rgba(226,232,240,0.7);
+}
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.25);
+  background: rgba(2,6,23,0.35);
+  color: rgba(226,232,240,0.92);
+  font-size: 0.78rem;
+}
+.btn-small{ padding: 7px 10px; font-size: 0.78rem; }
+
+
+
+
+
+/* ===================== CHAT HEADER ROW ===================== */
+.chat-header-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom: 10px;
+}
+
+.icon-btn{
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.55);
+  background: rgba(15,23,42,0.85);
+  color: rgba(226,232,240,0.95);
+  cursor: pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow: 0 12px 30px rgba(15,23,42,0.75);
+  transition: transform .12s ease, border-color .12s ease, background .12s ease;
+}
+
+.icon-btn:hover{
+  border-color: rgba(56,189,248,0.9);
+  background: rgba(30,64,175,0.25);
+  transform: translateY(-1px);
+}
+
+/* ===================== COLLAPSIBLE SETTINGS PANEL ===================== */
+.main-area{
+  --settings-col: minmax(320px, 420px);
+  grid-template-columns: minmax(0, 1fr) var(--settings-col);
+  align-items: start;
+}
+
+.side-panel{
+  transition: opacity .18s ease, transform .18s ease;
+  will-change: opacity, transform;
+}
+
+.main-area.settings-collapsed{
+  --settings-col: 0px;
+}
+
+.main-area.settings-collapsed .side-panel{
+  opacity: 0;
+  transform: translateX(16px);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+
+@media (max-width: 900px){
+  .main-area{
+    grid-template-columns: 1fr;
+  }
+  .main-area.settings-collapsed .side-panel{
+    display: none;
+  }
 }
 
 

@@ -126,112 +126,159 @@
 
     <!-- ================= VIEW TOGGLE ================= -->
      <nav class="view-toggle" id="page-nav">
-      <button class="view-tab active" type="button" data-scroll="view-assistant"> · Ask FlowerLens</button>
-      <button class="view-tab" type="button" data-scroll="view-dataset"> · Training data & feature space</button>
-      <button class="view-tab" type="button" data-scroll="distance-explanation"> · Distances & neighbour vote</button>
+      <button class="view-tab active" type="button" data-view="view-assistant"> · Ask FlowerLens</button>
+      <button class="view-tab" type="button" data-view="view-dataset"> · Training data &amp; feature space</button>
       <a class="view-tab" href="{{ url_for('model_card') }}"> · Model card</a>
     </nav>
 
 
+
     <!-- ====================================================================== -->
-    <!--                                VIEW: CHAT                             -->
-    <!-- ====================================================================== -->
-    <section id="view-assistant" class="app-view active">
-      <section class="main-area">
+<!--                                VIEW: CHAT                              -->
+<!-- ====================================================================== -->
+<section id="view-assistant" class="app-view active">
+  <section class="main-area">
 
-        <!-- ========= CHAT PANEL ========= -->
-        <section class="chat-panel">
-          <div class="chat-header">
-            <h2>Ask FlowerLens</h2>
+    <!-- ========= CHAT PANEL ========= -->
+    <section class="chat-panel">
+
+      <div class="chat-header-row">
+        <h2>Ask FlowerLens</h2>
+
+        <!-- Settings toggle (icon) -->
+        <button
+          id="toggle-settings"
+          class="icon-btn"
+          type="button"
+          aria-label="Toggle KNN settings"
+          aria-expanded="true"
+          title="KNN settings"
+        >
+          ⚙️
+        </button>
+      </div>
+
+      <!-- Small settings summary -->
+      <div class="settings-summary" id="settings-summary">
+        <span class="summary-label">Current KNN settings</span>
+        <span class="summary-value" id="summary-k">k = 5</span>
+        <span class="summary-dot">·</span>
+        <span class="summary-value" id="summary-metric">Metric: Euclidean</span>
+      </div>
+
+      <div class="chat-window" id="chat-window">
+        <div class="chat-message bot">
+          <div class="chat-bubble">
+            Hi! Upload a flower image and I'll tell you what species it may be.
           </div>
+        </div>
+      </div>
 
-          <!-- Small settings summary -->
-          <div class="settings-summary" id="settings-summary">
-            <span class="summary-label">Current KNN settings</span>
-            <span class="summary-value" id="summary-k">k = 5</span>
-            <span class="summary-dot">·</span>
-            <span class="summary-value" id="summary-metric">Metric: Euclidean</span>
+      <div id="result-card" class="result-card" hidden>
+        <div class="result-top">
+          <div>
+            <div class="result-label">Prediction</div>
+            <div id="result-pred" class="result-pred">—</div>
           </div>
-
-          <div class="chat-window" id="chat-window">
-            <div class="chat-message bot">
-              <div class="chat-bubble">
-                Hi! Upload a flower image and I'll tell you what species it may be.
-              </div>
-            </div>
+          <div class="result-metrics">
+            <span class="chip" id="result-km">k=5 · Euclidean</span>
+            <span class="chip" id="result-sim">Similarity —</span>
           </div>
+        </div>
 
-          <div class="chat-input-row">
-            <button id="chat-upload-btn" class="btn-upload highlighted-upload">
-              <span class="upload-icon">📷</span>
-              <span class="upload-label">Upload flower image</span>
-            </button>
-            <input type="text" id="chat-input" class="chat-input" placeholder="Ask me something…" />
-            <button id="chat-send" class="btn-primary">Send</button>
+        <div class="result-actions">
+          <button class="btn-secondary btn-small" type="button" data-jump="feature-space">
+            Show neighbours
+          </button>
+          <button class="btn-secondary btn-small" type="button" data-jump="heatmap-explainer-card">
+            Why this result?
+          </button>
+        </div>
 
-            <input type="file" id="file-input" accept="image/*" hidden />
-          </div>
+        <p class="result-disclaimer">
+          Prototype output: do not treat as a guaranteed botanical identification.
+        </p>
+      </div>
 
-          <!-- Preview UNDER upload button -->
-          <div id="pending-preview" style="margin-top: 10px; text-align:center;"></div>
+      <div class="chat-input-row">
+        <button id="chat-upload-btn" class="btn-upload highlighted-upload" type="button">
+          <span class="upload-icon">📷</span>
+          <span class="upload-label">Upload flower image</span>
+        </button>
 
-          <p class="chat-hint">
-            First upload a flower image, then you can ask questions about the prediction.
+        <input type="text" id="chat-input" class="chat-input" placeholder="Ask me something…" />
+        <button id="chat-send" class="btn-primary" type="button">Send</button>
+
+        <input type="file" id="file-input" accept="image/*" hidden />
+      </div>
+
+      <!-- Preview UNDER upload button -->
+      <div id="pending-preview" style="margin-top: 10px; text-align:center;"></div>
+
+      <p class="chat-hint">
+        First upload a flower image, then you can ask questions about the prediction.
+      </p>
+
+    </section>
+
+    <!-- ========= RIGHT SIDE: SETTINGS ======== -->
+    <aside class="side-panel">
+      <section class="side-card">
+        <h2 class="side-title">Settings for the KNN Algorithm</h2>
+
+        <!-- K -->
+        <div class="param-group">
+          <label for="k-slider">
+            Number of neighbours <span class="badge" id="k-value">5</span>
+          </label>
+          <input id="k-slider" type="range" min="1" max="25" step="1" value="5" />
+          <p class="param-help">
+            <strong>k</strong> controls how many neighbours vote.
+            Small k → sensitive to noise.
+            Large k → smoother but less detailed.
           </p>
-        </section>
+        </div>
 
-        <!-- ========= RIGHT SIDE: SETTINGS ======== -->
-        <aside class="side-panel">
-          <section class="side-card">
-            <h2 class="side-title">Settings for the KNN Algorithm</h2>
+        <!-- Distance metric -->
+        <div class="param-group">
+          <label for="metric-select">Distance metric</label>
+          <select id="metric-select">
+            <option value="euclidean">Euclidean distance</option>
+            <option value="manhattan">Manhattan distance</option>
+            <option value="minkowski">Minkowski distance (p-th order)</option>
+          </select>
+          <p id="metric-description" class="param-help">
+            Euclidean distance measures straight-line distance like with a ruler.
+          </p>
+        </div>
 
-            <!-- K -->
-            <div class="param-group">
-              <label for="k-slider">
-                Number of neighbours <span class="badge" id="k-value">5</span>
-              </label>
-              <input id="k-slider" type="range" min="1" max="25" step="1" value="5" />
-              <p class="param-help">
-                <strong>k</strong> controls how many neighbours vote.  
-                Small k → sensitive to noise.  
-                Large k → smoother but less detailed.
-              </p>
-            </div>
+        <p class="param-note">
+          The chat uses these exact settings when making predictions.
+        </p>
 
-            <!-- Distance metric -->
-            <div class="param-group">
-              <label for="metric-select">Distance metric</label>
-              <select id="metric-select">
-                <option value="euclidean">Euclidean distance</option>
-                <option value="manhattan">Manhattan distance</option>
-                <option value="minkowski">Minkowski distance (p-th order)</option>
-              </select>
-              <p id="metric-description" class="param-help">
-                Euclidean distance measures straight-line distance like with a ruler.
-              </p>
-            </div>
-            <p class="param-note">
-              The chat also uses these exact settings when making predictions.
-            </p>
-            
-            <div class="compare-actions">
-              <button class="btn-secondary" id="btn-open-compare" type="button">
-                Open comparison view
-              </button>
-              <p class="param-help compare-help">
-                Compare two different <strong>k</strong> and distance-metric choices side-by-side.
-              </p>
-            </div>
-          </section>
-        </aside>
+        <div class="compare-actions">
+          <button class="btn-secondary" id="btn-open-compare" type="button">
+            Open comparison view
+          </button>
+          <p class="param-help compare-help">
+            Compare two different <strong>k</strong> and distance-metric choices side-by-side.
+          </p>
+        </div>
 
       </section>
-    </section>
+    </aside>
+
+  </section>
+</section>
+
+
+
 
     <!-- =========================================================================== -->
     <!--                         VIEW: DATASET + EXPLAINABILITY                      -->
     <!-- =========================================================================== -->
-    <section id="view-dataset" class="app-view active">
+    <section id="view-dataset" class="app-view">
+
 
 
       <section class="dataset-intro-card">
@@ -286,7 +333,7 @@
           <p class="plot-caption">
             Add, remove or inspect flowers in the training dataset.
           </p>
-
+          
           <div class="dataset-controls">
             <div class="filter-group">
               <label for="class-filter">Filter by class:</label>
@@ -298,11 +345,14 @@
               </select>
             </div>
 
+
+
             <div class="dataset-buttons">
               <button class="btn-secondary" id="btn-add-image">Add new image</button>
               <button class="btn-secondary" id="btn-remove-image" disabled>Remove selected image</button>
             </div>
           </div>
+
 
           <input type="file" id="dataset-file-input" accept="image/*" hidden />
 
@@ -353,129 +403,144 @@
       <!-- (Explainability long text sections – unchanged, omitted here for brevity if you want,
            but you can keep all your existing neighbour influence / distance explanations) -->
 
-      <!-- =========================== EXPLAINABILITY =============================== -->
-      <section class="distance-card" id="distance-explanation">
-        <h2>Distance measures, neighbour selection & class vote</h2>
-        <p>
-          The model measures how far each training flower is from the uploaded one.
-          Different distance metrics define “closeness” differently.
-        </p>
 
-        <div class="stepper distance-stepper">
-          <button class="step-pill distance-tab active" data-metric="euclidean">Euclidean</button>
-          <button class="step-pill distance-tab" data-metric="manhattan">Manhattan</button>
-          <button class="step-pill distance-tab" data-metric="minkowski">Minkowski</button>
-        </div>
 
-        <div class="distance-panel exp-panel active" data-metric-panel="euclidean">
-          <h3>Euclidean distance (straight line)</h3>
-          <p>The standard ruler distance:</p>
-          <div class="formula-box">
-            d = √[(x − x★)² + (y − y★)²]
-          </div>
-          <p>Highlighted rows below represent the current k nearest neighbours.</p>
-        </div>
 
-        <div class="distance-panel exp-panel" data-metric-panel="manhattan">
-          <h3>Manhattan distance (grid)</h3>
-          <p>Moves only horizontally/vertically:</p>
-          <div class="formula-box">
-            d = |x − x★| + |y − y★|
-          </div>
-          <p>Rows highlighted in gold are the nearest neighbours.</p>
-        </div>
 
-        <div class="distance-panel exp-panel" data-metric-panel="minkowski">
-          <h3>Minkowski distance (p-th order)</h3>
-          <p>A general version of both Euclidean and Manhattan:</p>
-          <div class="formula-box">
-            d = ( |x−x★|<sup>p</sup> + |y−y★|<sup>p</sup> )<sup>1/p</sup>
-          </div>
 
-          <div class="minkowski-row">
-            <label for="p-slider">Minkowski order p</label>
-            <div class="p-slider-wrap">
-              <input type="range" id="p-slider" min="1" max="5" step="0.1" value="2" />
-              <span id="p-value">p = 2.0</span>
-            </div>
-            <p class="param-help">
-              p = 1 → Manhattan  
-              p = 2 → Euclidean  
-              Values in between blend both effects.
-            </p>
-          </div>
-        </div>
 
-        <div class="distance-table-wrap">
-          <table class="data-table distance-table" id="distance-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Id</th>
-                <th>Class</th>
-                <th>x</th>
-                <th>y</th>
-                <th>Δx</th>
-                <th>Δy</th>
-                <th>d</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </section>
 
-      <section class="majority-overview">
-        <h3>Majority vote & final decision</h3>
-        <p>
-          Once distances are computed, the model selects the <strong>k</strong> nearest neighbours
-          and counts the classes among them. The class with the highest count is the prediction.
-        </p>
 
-        <p class="vote-summary" id="vote-summary"></p>
-      </section>
 
-      <section class="vote-details">
-        <div class="how-read-box">
-          <h3>How to read the vote summary</h3>
-          <p>
-            Each flower in the training set “votes” for a class. The <strong>k nearest neighbours</strong> 
-            are the only ones allowed to vote.
-          </p>
-          <ul class="read-list">
-            <li>🌼 <strong>Setosa</strong> → votes from flowers with similar small petals.</li>
-            <li>🌼<strong>Versicolor</strong> → medium-sized flowers contribute here.</li>
-            <li>🌼 <strong>Virginica</strong> → larger flowers influence this class.</li>
-          </ul>
-          <p>
-            The species with the <strong>highest number of votes</strong> becomes the predicted flower.
-            If the votes are close, confidence will be lower.
-          </p>
-          <p class="read-note">
-            Confidence = (Votes for predicted class ÷ k) × 100  
-          </p>
-        </div>
-      </section>
-      <!-- ====================================================================== -->
-<!--                     NEIGHBOUR INFLUENCE EXPLANATION                    -->
-<!-- ====================================================================== -->
+
+
+
+
+
+
+
+<section class="distance-card" id="distance-explanation">
+  <h2>Distance measures, neighbour selection &amp; class vote</h2>
+  <p>
+    The model measures how far each training flower is from the uploaded one.
+    Different distance metrics define “closeness” differently.
+  </p>
+
+  <div class="stepper distance-stepper">
+    <button class="step-pill distance-tab active" data-metric="euclidean">Euclidean</button>
+    <button class="step-pill distance-tab" data-metric="manhattan">Manhattan</button>
+    <button class="step-pill distance-tab" data-metric="minkowski">Minkowski</button>
+  </div>
+
+  <div class="distance-panel exp-panel active" data-metric-panel="euclidean">
+    <h3>Euclidean distance (straight line)</h3>
+    <p>The standard ruler distance:</p>
+    <div class="formula-box">
+      d = √[(x − x★)² + (y − y★)²]
+    </div>
+    <p>Highlighted rows below represent the current k nearest neighbours.</p>
+  </div>
+
+  <div class="distance-panel exp-panel" data-metric-panel="manhattan">
+    <h3>Manhattan distance (grid)</h3>
+    <p>Moves only horizontally/vertically:</p>
+    <div class="formula-box">
+      d = |x − x★| + |y − y★|
+    </div>
+    <p>Rows highlighted in gold are the nearest neighbours.</p>
+  </div>
+
+  <div class="distance-panel exp-panel" data-metric-panel="minkowski">
+    <h3>Minkowski distance (p-th order)</h3>
+    <p>A general version of both Euclidean and Manhattan:</p>
+    <div class="formula-box">
+      d = ( |x−x★|<sup>p</sup> + |y−y★|<sup>p</sup> )<sup>1/p</sup>
+    </div>
+
+    <div class="minkowski-row">
+      <label for="p-slider">Minkowski order p</label>
+      <div class="p-slider-wrap">
+        <input type="range" id="p-slider" min="1" max="5" step="0.1" value="2" />
+        <span id="p-value">p = 2.0</span>
+      </div>
+      <p class="param-help">
+        p = 1 → Manhattan
+        <br />
+        p = 2 → Euclidean
+        <br />
+        Values in between blend both effects.
+      </p>
+    </div>
+  </div>
+
+  <div class="distance-table-wrap">
+    <table class="data-table distance-table" id="distance-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Id</th>
+          <th>Class</th>
+          <th>x</th>
+          <th>y</th>
+          <th>Δx</th>
+          <th>Δy</th>
+          <th>d</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="majority-overview">
+  <h3>Majority vote &amp; final decision</h3>
+  <p>
+    Once distances are computed, the model selects the <strong>k</strong> nearest neighbours
+    and counts the classes among them. The class with the highest count is the prediction.
+  </p>
+
+  <p class="vote-summary" id="vote-summary"></p>
+</section>
+
+<section class="vote-details">
+  <div class="how-read-box">
+    <h3>How to read the vote summary</h3>
+    <p>
+      Each flower in the training set “votes” for a class. The <strong>k nearest neighbours</strong>
+      are the only ones allowed to vote.
+    </p>
+    <ul class="read-list">
+      <li>🌼 <strong>Setosa</strong> → votes from flowers with similar small petals.</li>
+      <li>🌼 <strong>Versicolor</strong> → medium-sized flowers contribute here.</li>
+      <li>🌼 <strong>Virginica</strong> → larger flowers influence this class.</li>
+    </ul>
+    <p>
+      The species with the <strong>highest number of votes</strong> becomes the predicted flower.
+      If the votes are close, confidence will be lower.
+    </p>
+    <p class="read-note">
+      Confidence = (Votes for predicted class ÷ k) × 100
+    </p>
+  </div>
+</section>
+
 <section class="explainability-deep-card">
   <h2>Understanding Neighbour Influence in KNN</h2>
 
   <p>
     The K-Nearest Neighbours (KNN) algorithm compares the uploaded flower with
     every flower in the training dataset, selects the closest neighbours, and
-    predicts the class that appears most frequently among them. However, not all 
+    predicts the class that appears most frequently among them. However, not all
     neighbours contribute equally. To make this transparent, FlowerLens introduces
-    a <strong>Neighbour Influence Heatmap</strong> that reveals how much each 
+    a <strong>Neighbour Influence Heatmap</strong> that reveals how much each
     neighbour affects the prediction.
   </p>
 
   <h3>Why Influence Matters</h3>
   <p>
-    Even within the top <em>k</em> neighbours, distance varies. A flower extremely 
-    close to the uploaded image contributes more strongly than one barely in the 
-    top <em>k</em>. The heatmap visualises this difference by assigning each 
+    Even within the top <em>k</em> neighbours, distance varies. A flower extremely
+    close to the uploaded image contributes more strongly than one barely in the
+    top <em>k</em>. The heatmap visualises this difference by assigning each
     neighbour a weighted influence score.
   </p>
 
@@ -531,9 +596,10 @@
   </p>
 </section>
 
+      <!-- =========================== EXPLAINABILITY =============================== -->
     </section> <!-- END VIEW DATASET -->
-
   </main>
+
 
   <!-- ===================== COMPARISON VIEW (MODAL) ===================== -->
 <div id="comparison-modal" class="comparison-modal" aria-hidden="true">
@@ -691,13 +757,14 @@
       if (l.includes('virginica')) return 'rgba(244,114,182,0.9)';
       return 'rgba(148,163,184,0.9)';
     }
-
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, (c) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
     );
   }
   function baseClassJs(label) {
+
+
     const s = String(label || '').toLowerCase();
     if (s.includes('setosa')) return 'Setosa';
     if (s.includes('versicolor')) return 'Versicolor';
@@ -719,32 +786,85 @@
     }
 
     /* ============================== VIEW TABS ============================== */
+ const pageNav = document.getElementById('page-nav');
+const views = Array.from(document.querySelectorAll('.app-view'));
 
-    const pageNav = document.getElementById('page-nav');
-    function setActiveNav(id) {
-      if (!pageNav) return;
-      pageNav.querySelectorAll('.view-tab').forEach((btn) => {
-        btn.classList.toggle('active', btn.dataset.scroll === id);
-      });
-    }
-    function scrollToSection(id) {
-       const el = document.getElementById(id);
-       if (!el) return;
-       setActiveNav(id);
-       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-       setTimeout(() => {
-        resizeScatterSoon();
-      }, 250);
-    }
+function setActiveNav(viewId) {
+  if (!pageNav) return;
+  pageNav.querySelectorAll('.view-tab[data-view]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.view === viewId);
+  });
+}
 
-    if (pageNav) {
-      pageNav.querySelectorAll('.view-tab[data-scroll]').forEach((btn) => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          scrollToSection(btn.dataset.scroll);
-        });
-      });
-    }
+function showView(viewId, { scrollTop = true } = {}) {
+  views.forEach((v) => v.classList.toggle('active', v.id === viewId));
+  setActiveNav(viewId);
+
+  if (scrollTop) {
+    const el = document.getElementById(viewId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  setTimeout(() => {
+    resizeScatterSoon();
+  }, 200);
+}
+
+function viewForAnchor(anchorId) {
+  const datasetAnchors = new Set([
+    'view-dataset',
+    'feature-space',
+    'heatmap-explainer-card',
+    'dataset-scatter',
+    'distance-explanation',
+    'vote-summary',
+    'distance-table'
+  ]);
+  if (datasetAnchors.has(anchorId)) return 'view-dataset';
+  return 'view-assistant';
+}
+
+
+function jumpTo(anchorId) {
+  const v = viewForAnchor(anchorId);
+  showView(v, { scrollTop: false });
+  const el = document.getElementById(anchorId);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-jump]');
+  if (!btn) return;
+  const id = btn.getAttribute('data-jump');
+  if (id) jumpTo(id);
+});
+
+
+function scrollToSection(id) {
+  jumpTo(id);
+}
+
+if (pageNav) {
+  pageNav.querySelectorAll('.view-tab[data-view]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showView(btn.dataset.view);
+      history.replaceState(null, '', `#${btn.dataset.view}`);
+    });
+  });
+}
+
+window.addEventListener('load', () => {
+  const hash = (location.hash || '').replace('#', '');
+  if (hash && document.getElementById(hash)) {
+    showView(hash, { scrollTop: true });
+  } else {
+    showView('view-assistant', { scrollTop: false });
+  }
+});
+   
+
+
 
 
 
@@ -757,6 +877,42 @@
     const summaryMetric = document.getElementById('summary-metric');
     const summaryK2 = document.getElementById('summary-k-2');
     const summaryMetric2 = document.getElementById('summary-metric-2');
+
+/* ===================== SETTINGS PANEL COLLAPSE ===================== */
+const settingsToggleBtn = document.getElementById('toggle-settings');
+const mainAreaAssistant = document.querySelector('#view-assistant .main-area');
+
+function setSettingsCollapsed(collapsed) {
+  if (!mainAreaAssistant) return;
+
+  mainAreaAssistant.classList.toggle('settings-collapsed', collapsed);
+  settingsToggleBtn?.setAttribute('aria-expanded', String(!collapsed));
+
+
+  try {
+    localStorage.setItem('knnSettingsCollapsed', collapsed ? '1' : '0');
+  } catch {}
+
+
+  setTimeout(() => {
+    resizeScatterSoon();
+    resizeComparisonPlots?.();
+  }, 200);
+}
+
+if (settingsToggleBtn && mainAreaAssistant) {
+  settingsToggleBtn.addEventListener('click', () => {
+    const collapsed = mainAreaAssistant.classList.contains('settings-collapsed');
+    setSettingsCollapsed(!collapsed);
+  });
+
+  try {
+    if (localStorage.getItem('knnSettingsCollapsed') === '1') {
+      setSettingsCollapsed(true);
+    }
+  } catch {}
+}
+
 
     function updateSettingsSummary() {
       const kText = `k = ${kSlider.value}`;
@@ -1401,6 +1557,17 @@ function syncComparisonIfOpen() {
           similarityText.textContent = `Similarity to closest flower: ${data.similarity}%`;
         }
 
+        const resultCard = document.getElementById('result-card');
+        const metricName = metricSelect.options[metricSelect.selectedIndex].text.split(' ')[0];
+        if (resultCard) {
+          document.getElementById('result-pred').textContent = data.class || '—';
+          document.getElementById('result-km').textContent = `k=${kSlider.value} · ${metricName}`;
+          if (typeof data.similarity === 'number') {
+            document.getElementById('result-sim').textContent = `Similarity ${data.similarity}%`;
+          }
+          resultCard.hidden = false;
+        }
+
         return data;
       } catch {
         addChatMessage('Error sending image to backend.', 'bot');
@@ -1535,33 +1702,55 @@ function syncComparisonIfOpen() {
     const pointDetailsDiv = document.getElementById('point-details');
 
     let selectedRowId = null;
-
+    
     function renderDatasetTable() {
-      const filter = classFilter.value;
+      const filter = (classFilter?.value || 'all').toLowerCase();
       datasetTableBody.innerHTML = '';
       const allPoints = chatUploadEntry ? [chatUploadEntry, ...datasetPoints] : datasetPoints;
-      allPoints
-      .filter((p) => filter === 'all' || p.label.toLowerCase().includes(filter))
-      .forEach((p) => {
-          const tr = document.createElement('tr');
-          tr.dataset.id = p.id;
-          tr.innerHTML = `
-            <td>${p.image ? `<img src="${p.image}" class="thumb-img"/>` : ''}</td>
-            <td>${p.id}</td>
-            <td>${escapeHtml(p.label)}</td>
-            <td>${escapeHtml(p.source)}</td>
-            <td>${p.inTraining ? 'Yes' : 'No'}</td>
-          `;
-          tr.addEventListener('click', () => {
-            showPointDetails(p);
-            selectDatasetRow(p.id);
-          });
-
-          datasetTableBody.appendChild(tr);
+      const filtered = allPoints.filter((p) => {
+        const cls = baseClassJs(p.label).toLowerCase();
+        return filter === 'all' || cls === filter;
+      });
+      if (!filtered.length) {
+        datasetTableBody.innerHTML = `<tr><td colspan="5">No matches.</td></tr>`;
+        return;
+      }
+      filtered.forEach((p) => {
+        const tr = document.createElement('tr');
+        tr.dataset.id = p.id;
+        tr.innerHTML = `
+        <td>${p.image ? `<img src="${p.image}" class="thumb-img"/>` : ''}</td>
+        <td>${p.id}</td>
+        <td>${escapeHtml(p.label)}</td>
+        <td>${escapeHtml(p.source)}</td>
+        <td>${p.inTraining ? 'Yes' : 'No'}</td>
+        `;
+        tr.addEventListener('click', () => {
+          showPointDetails(p);
+          selectDatasetRow(p.id);
         });
+        datasetTableBody.appendChild(tr);
+      });
     }
+    classFilter?.addEventListener('change', renderDatasetTable);
 
-    classFilter.addEventListener('change', renderDatasetTable);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     addBtn.addEventListener('click', () => datasetFileInput.click());
     datasetFileInput.addEventListener('change', (e) => {
