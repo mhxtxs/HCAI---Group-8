@@ -1580,11 +1580,37 @@ function focusQueryInScatter() {
       });
     }
 
+let scatterResizeTimer = null;
+
+function scheduleScatterResize() {
+  if (!scatterInitialized) return;
+
+  clearTimeout(scatterResizeTimer);
+  scatterResizeTimer = setTimeout(() => {
+    resizeScatterSoon();
+    setTimeout(resizeScatterSoon, 200);
+  }, 60);
+}
+
+window.addEventListener('resize', scheduleScatterResize);
+
+let scatterRO = null;
+function attachScatterResizeObserver() {
+  const el = document.getElementById('dataset-scatter');
+  if (!el || !window.ResizeObserver || scatterRO) return;
+
+  scatterRO = new ResizeObserver(() => scheduleScatterResize());
+  scatterRO.observe(el);
+  if (el.parentElement) scatterRO.observe(el.parentElement);
+}
+
+
     function initScatterPlot() {
       const el = document.getElementById('dataset-scatter');
       if (!el) return;
       if (!el.style.height) el.style.height = '420px';
       scatterInitialized = true;
+      attachScatterResizeObserver();
       updateScatterHighlight();
       resizeScatterSoon();
     }
@@ -1708,6 +1734,7 @@ function focusQueryInScatter() {
               }
             });
           }
+          scheduleScatterResize(); 
         });
       }
       updateDistanceTable();
@@ -1917,10 +1944,13 @@ function focusQueryInScatter() {
       }
     });
 
-
     renderDatasetTable();
-    initScatterPlot();
     updateSettingsSummary();
+    window.addEventListener('load', () => {
+      initScatterPlot();
+      setTimeout(() => resizeScatterSoon(), 150);
+    });
+
   </script>
 </body>
 </html>
