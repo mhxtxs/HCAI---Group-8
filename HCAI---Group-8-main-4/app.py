@@ -226,8 +226,13 @@ def generate_heatmap(img_bytes):
 # HOME PAGE
 # -----------------------------------------------------------
 @app.route("/")
-def home():
+def index():
     return render_template("index.html")
+
+@app.route("/model-card")
+@app.route("/model-card.html")
+def model_card():
+    return render_template("model-card.html")
 
 # -----------------------------------------------------------
 # API: PREDICT + RETURN HEATMAP + ORIGINAL IMAGE (BASE64)

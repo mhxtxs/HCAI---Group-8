@@ -251,6 +251,118 @@ main.app-root {
 }
 
 /* =======================================================================
+   STEP-GUIDE
+======================================================================= */
+.how-card {
+  max-width: 1240px;
+  margin: 18px auto 18px;
+  padding: 14px 18px 16px;
+  border-radius: 22px;
+  background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.96), #020617);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  box-shadow: var(--shadow-subtle);
+}
+
+.how-card-header h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  color: #e5e7eb;
+}
+
+.how-card-header p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #9ca3af;
+}
+
+.how-card-body {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.how-steps-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.how-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: linear-gradient(to bottom, #020617, #02091f);
+  color: #e5e7eb;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+}
+
+.how-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--accent-green-soft);
+  color: var(--accent-green);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.how-step-label {
+  white-space: nowrap;
+}
+
+.how-step:hover {
+  border-color: rgba(248, 250, 252, 0.7);
+  transform: translateY(-1px);
+}
+
+.how-step.active {
+  border-color: var(--accent-green);
+  background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.24), #020617);
+}
+
+.how-step.active .how-step-number {
+  background: var(--accent-green);
+  color: #022c22;
+}
+
+.how-step-detail {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  background: #020617;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  font-size: 0.87rem;
+  color: #e5e7eb;
+}
+
+.how-step-detail h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+.how-step-detail a {
+  color: var(--accent-teal);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.step-target-glow {
+  outline: 2px solid rgba(34, 197, 94, 0.55);
+  box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.12), 0 0 22px rgba(34, 197, 94, 0.25);
+  border-radius: 18px;
+}
+
+
+/* =======================================================================
    BASIC LAYOUT GRID
 ======================================================================= */
 .main-area {
@@ -1356,3 +1468,136 @@ body.modal-open {
   margin-bottom: 0;
   opacity: 0.95;
 }
+
+/* =========================
+   MODEL CARD PAGE
+   ========================= */
+body.modelcard-page{
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+  background-image:
+    linear-gradient(rgba(2, 6, 23, 0.70), rgba(2, 6, 23, 0.70)),
+    url("images/bg_img.jpg");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.modelcard-page .modelcard-nav{
+  max-width: 1240px;
+  margin: 18px auto 26px;
+}
+
+.view-toggle .view-tab{
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.modelcard-page .container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 44px 26px 70px;
+}
+
+.modelcard-page .page-header {
+  text-align: center;
+  margin-bottom: 44px;
+}
+
+.modelcard-page .page-header h1 {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 850;
+  letter-spacing: -0.6px;
+  color: #0E5F4B;
+}
+
+.modelcard-page .subtitle {
+  margin: 10px 0 0;
+  font-size: 16px;
+  font-weight: 650;
+  color: #0F8F74;
+  opacity: 0.75;
+}
+
+.modelcard-page .card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 26px;
+  align-items: stretch;
+}
+
+.modelcard-page .card {
+  background: #ffffff;
+  border: 1px solid rgba(209, 250, 229, 0.75);
+  border-radius: 18px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+  padding: 20px 22px 22px;
+  position: relative;
+  min-height: 255px;
+  color: #334155;
+}
+
+.modelcard-page .card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 5px;
+  width: 100%;
+  background: #22C55E;
+  border-radius: 18px 18px 0 0;
+}
+
+.modelcard-page .card h2 {
+  margin: 8px 0 14px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0F8F74;
+}
+
+.modelcard-page .card p {
+  margin: 10px 0;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.modelcard-page .card strong {
+  color: #0E5F4B;
+  font-weight: 750;
+}
+
+.modelcard-page .section-label {
+  margin-top: 14px;
+  font-weight: 800;
+  color: #0E5F4B;
+}
+
+.modelcard-page ul {
+  margin: 8px 0 0 18px;
+  padding: 0;
+}
+
+.modelcard-page li {
+  margin: 8px 0;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+@media (max-width: 980px) {
+  .modelcard-page .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .modelcard-page .page-header h1 { font-size: 38px; }
+}
+
+@media (max-width: 640px) {
+  .modelcard-page .card-grid { grid-template-columns: 1fr; }
+  .modelcard-page .container { padding: 34px 16px 54px; }
+  .modelcard-page .page-header h1 { font-size: 32px; }
+}
+
+

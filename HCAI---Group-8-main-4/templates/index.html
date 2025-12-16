@@ -48,7 +48,7 @@
 <body>
   <main class="app-root">
 
-    <!-- ================= HERO ================= -->
+    <!-- ================= HEADER ================= -->
     <header class="hero">
       <div class="hero-text">
         <h1 class="hero-title">FlowerLens</h1>
@@ -72,15 +72,66 @@
       </div>
     </header>
 
-    <!-- ================= VIEW TOGGLE ================= -->
-    <section class="view-toggle">
-      <button class="view-tab active" data-target="view-assistant">
-        Ask FlowerLens
-      </button>
-      <button class="view-tab" data-target="view-dataset">
-        Model training data & Explanation of the algorithm
-      </button>
+    <!-- ================= STEP-GUIDE ================= -->
+     <section class="how-card" id="how-it-works">
+       <div class="how-card-header">
+        <h2>How FlowerLens works</h2>
+        <p>
+          Click a step to see what happens inside the KNN model and jump to the
+          relevant part of the interface.
+        </p>
+      </div>
+      <div class="how-card-body">
+        <div class="how-steps-list" role="tablist" aria-label="How FlowerLens works steps">
+          <button class="how-step active" type="button" data-step="1">
+            <span class="how-step-number">1</span>
+            <span class="how-step-label">Model memory</span>
+          </button>
+          <button class="how-step" type="button" data-step="2">
+            <span class="how-step-number">2</span>
+            <span class="how-step-label">Your flower</span>
+          </button>
+          <button class="how-step" type="button" data-step="3">
+            <span class="how-step-number">3</span>
+            <span class="how-step-label">Feature space</span>
+          </button>
+          <button class="how-step" type="button" data-step="4">
+            <span class="how-step-number">4</span>
+            <span class="how-step-label">Measure distances</span>
+          </button>
+          <button class="how-step" type="button" data-step="5">
+            <span class="how-step-number">5</span>
+            <span class="how-step-label">Nearest neighbours</span>
+          </button>
+          <button class="how-step" type="button" data-step="6">
+            <span class="how-step-number">6</span>
+            <span class="how-step-label">Neighbour vote</span>
+          </button>
+          <button class="how-step" type="button" data-step="7">
+            <span class="how-step-number">7</span>
+            <span class="how-step-label">Explanation</span>
+          </button>
+        </div>
+        <div class="how-step-detail" aria-live="polite">
+          <h3 id="how-step-title"> · Model memory</h3>
+          <p id="how-step-text">
+            FlowerLens starts with a small training dataset of labelled flower images.
+            This is the model’s memory. You can explore it in the
+            <a href="#view-dataset">training data &amp; explanation view</a>.
+          </p>
+        </div>
+      </div>
     </section>
+
+
+    <!-- ================= VIEW TOGGLE ================= -->
+     <nav class="view-toggle" id="page-nav">
+      <button class="view-tab active" type="button" data-scroll="view-assistant"> · Ask FlowerLens</button>
+      <button class="view-tab" type="button" data-scroll="view-dataset"> · Training data & feature space</button>
+      <button class="view-tab" type="button" data-scroll="distance-explanation"> · Distances & neighbour vote</button>
+      <a class="view-tab" href="{{ url_for('model_card') }}"> · Model card</a>
+    </nav>
+
 
     <!-- ====================================================================== -->
     <!--                                VIEW: CHAT                             -->
@@ -180,7 +231,8 @@
     <!-- =========================================================================== -->
     <!--                         VIEW: DATASET + EXPLAINABILITY                      -->
     <!-- =========================================================================== -->
-    <section id="view-dataset" class="app-view">
+    <section id="view-dataset" class="app-view active">
+
 
       <section class="dataset-intro-card">
         <h2>Training data used by the KNN model</h2>
@@ -211,7 +263,7 @@
       <section class="dataset-area">
 
         <!-- PLOT -->
-        <article class="plot-card">
+        <article class="plot-card" id="feature-space">
           <h2>Dataset in feature space</h2>
           <p class="plot-caption">
             Each dot is a flower from the training dataset.  
@@ -631,20 +683,33 @@
     }
 
     /* ============================== VIEW TABS ============================== */
-    document.querySelectorAll('.view-tab').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.view-tab').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        const target = btn.dataset.target;
-        document.querySelectorAll('.app-view').forEach((v) => {
-          v.classList.toggle('active', v.id === target);
-        });
 
-        if (target === 'view-dataset') {
-          resizeScatterSoon();
-        }
+    const pageNav = document.getElementById('page-nav');
+    function setActiveNav(id) {
+      if (!pageNav) return;
+      pageNav.querySelectorAll('.view-tab').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.scroll === id);
       });
-    });
+    }
+    function scrollToSection(id) {
+       const el = document.getElementById(id);
+       if (!el) return;
+       setActiveNav(id);
+       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+       setTimeout(() => {
+        resizeScatterSoon();
+      }, 250);
+    }
+
+    if (pageNav) {
+      pageNav.querySelectorAll('.view-tab[data-scroll]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          scrollToSection(btn.dataset.scroll);
+        });
+      });
+    }
+
 
 
     /* ============================ PARAMETER CONTROLS =========================== */
@@ -1502,6 +1567,7 @@ function focusQueryInScatter() {
       `;
     }
 
+
     /* ============================= SCATTER PLOT ============================= */
     let scatterInitialized = false;
     function resizeScatterSoon() {
@@ -1515,17 +1581,62 @@ function focusQueryInScatter() {
     }
 
     function initScatterPlot() {
+      const el = document.getElementById('dataset-scatter');
+      if (!el) return;
+      if (!el.style.height) el.style.height = '420px';
+      scatterInitialized = true;
+      updateScatterHighlight();
+      resizeScatterSoon();
+    }
+
+    
+    function updateQueryTrace() {
+      if (!scatterInitialized) return;
+      updateScatterHighlight();
+    }
+    function updateScatterHighlight() {
+      if (!scatterInitialized) return;
+      const el = document.getElementById('dataset-scatter');
+      if (!el) return;
+      const settings = getMainSettings();
+      const ref = getRefPoint();
+      const nearest = ref ? nearestIdsForSettings(ref, settings) : [];
+
       const x = datasetPoints.map((p) => p.x);
       const y = datasetPoints.map((p) => p.y);
       const ids = datasetPoints.map((p) => p.id);
       const labels = datasetPoints.map((p) => p.label);
-      const colors = datasetPoints.map((p) => colorForLabel(p.label));
-      const sizes = datasetPoints.map(() => 10);
-      const lineColors = datasetPoints.map(() => 'rgba(15,23,42,0.95)');
-      const lineWidths = datasetPoints.map(() => 1);
+
+      const colors = [];
+      const sizes = [];
+      const lineColors = [];
+      const lineWidths = [];
+      const symbols = [];
+
+      datasetPoints.forEach((p, i) => {
+        colors[i] = colorForLabel(p.label);
+        sizes[i] = 10;
+        lineColors[i] = 'rgba(15,23,42,0.95)';
+        lineWidths[i] = 1;
+        symbols[i] = 'circle';
+
+        if (nearest.includes(p.id)) {
+          sizes[i] = 18;
+          lineColors[i] = 'rgba(250,204,21,1)';
+          lineWidths[i] = 6;
+        }
+
+        if (selectedRowId != null && p.id === selectedRowId) {
+          symbols[i] = 'diamond';
+          sizes[i] = Math.max(sizes[i], 22);
+          lineColors[i] = 'rgba(56,189,248,1)';
+          lineWidths[i] = Math.max(lineWidths[i], 6);
+        }
+      });
 
       const xAll = queryPoint ? [...x, queryPoint.x] : x;
       const yAll = queryPoint ? [...y, queryPoint.y] : y;
+
       const minX = Math.min(...xAll);
       const maxX = Math.max(...xAll);
       const minY = Math.min(...yAll);
@@ -1541,6 +1652,7 @@ function focusQueryInScatter() {
         marker: {
           size: sizes,
           color: colors,
+          symbol: symbols,
           line: { width: lineWidths, color: lineColors }
         },
         text: labels.map((l, i) => `Id: ${ids[i]}<br>Class: ${escapeHtml(l)}`),
@@ -1557,125 +1669,52 @@ function focusQueryInScatter() {
           symbol: 'star',
           color: 'rgba(56,189,248,1)'
         },
-        text: [chatUploadEntry ? `Chat upload` : 'Uploaded flower'],
+        text: [chatUploadEntry ? 'Chat upload' : 'Uploaded flower'],
         hovertemplate: '%{text}<extra></extra>'
       };
 
-      Plotly.newPlot(
-        'dataset-scatter',
+
+      const p = Plotly.react(
+        el,
         [tracePoints, traceQuery],
-        {
-          margin: { t: 10, r: 10, b: 40, l: 40 },
-          xaxis: { range: [minX - padX, maxX + padX] },
-          yaxis: { range: [minY - padY, maxY + padY] },
+         {
+          height: 420,
+          margin: { t: 8, r: 8, b: 28, l: 28 },
+          xaxis: { range: [minX - padX, maxX + padX], zeroline: false },
+          yaxis: { range: [minY - padY, maxY + padY], zeroline: false },
           hovermode: 'closest',
-          showlegend: false
+          showlegend: false,
+          paper_bgcolor: 'rgba(0,0,0,0)',
+          plot_bgcolor: 'rgba(0,0,0,0)'
         },
-        { responsive: true }
+        { responsive: true, displayModeBar: false }
       );
-
-      document.getElementById('dataset-scatter').on('plotly_click', (data) => {
-        const pt = data.points[0];
-        if (pt.curveNumber === 0) {
-          const idx = pt.pointIndex;
-          const point = datasetPoints[idx];
-          showPointDetails(point);
-          selectDatasetRow(point.id);
-          return;
-        }
-        if (pt.curveNumber === 1 && chatUploadEntry) {
-          showPointDetails(chatUploadEntry);
-          selectDatasetRow(CHAT_UPLOAD_ID);
-        }
-      });
-
-      scatterInitialized = true;
-      updateScatterHighlight();
-      resizeScatterSoon();
+      if (p && typeof p.then === 'function') {
+        p.then(() => {
+          if (el.removeAllListeners) el.removeAllListeners('plotly_click');
+          if (el.on) {
+            el.on('plotly_click', (data) => {
+              const pt = data.points[0];
+              if (pt.curveNumber === 0) {
+                const idx = pt.pointIndex;
+                const point = datasetPoints[idx];
+                showPointDetails(point);
+                selectDatasetRow(point.id);
+                return;
+              }
+              if (pt.curveNumber === 1 && chatUploadEntry) {
+                showPointDetails(chatUploadEntry);
+                selectDatasetRow(CHAT_UPLOAD_ID);
+              }
+            });
+          }
+        });
       }
-
-    function updateQueryTrace() {
-      if (!scatterInitialized) return;
-      Plotly.restyle(
-        'dataset-scatter',
-        {
-          x: [queryPoint ? [queryPoint.x] : []],
-          y: [queryPoint ? [queryPoint.y] : []],
-          'marker.size': [queryPoint ? 20 : 0]
-        },
-        [1]
-      );
-    }
-
-    function baseClassJs(label) {
-      const l = label.toLowerCase();
-      if (l.includes('setosa')) return 'Setosa';
-      if (l.includes('versicolor')) return 'Versicolor';
-      if (l.includes('virginica')) return 'Virginica';
-      return 'Other';
-    }
-
-    function updateScatterHighlight() {
-      if (!scatterInitialized) return;
-      const metric = metricSelect.value;
-      const k = Number(kSlider.value);
-      const ref =
-        queryPoint ||
-        (selectedRowId ? datasetPoints.find((p) => p.id === selectedRowId) : null);
-
-      const colors = [];
-      const sizes = [];
-      const lineColors = [];
-      const lineWidths = [];
-      const symbols = [];
-      let nearestIds = [];
-
-      if (ref) {
-        const sorted = datasetPoints
-          .map((p) => ({
-            id: p.id,
-            d: distance2D(p, ref, metric)
-          }))
-          .sort((a, b) => a.d - b.d);
-        nearestIds = sorted.slice(0, k).map((o) => o.id);
-      }
-
-      datasetPoints.forEach((p, i) => {
-        colors[i] = colorForLabel(p.label);
-        sizes[i] = 10;
-        lineColors[i] = 'rgba(15,23,42,0.95)';
-        lineWidths[i] = 1;
-        symbols[i] = 'circle';
-
-        if (nearestIds.includes(p.id)) {
-          sizes[i] = 18;
-          lineColors[i] = 'rgba(250,204,21,1)';
-          lineWidths[i] = 6;
-        }
-
-        if (selectedRowId != null && p.id === selectedRowId) {
-          symbols[i] = 'diamond';
-          sizes[i] = Math.max(sizes[i], 22);
-          lineColors[i] = 'rgba(56,189,248,1)';
-          lineWidths[i] = Math.max(lineWidths[i], 6);
-        }
-      });
-
-      Plotly.restyle(
-        'dataset-scatter',
-        {
-          'marker.color': [colors],
-          'marker.size': [sizes],
-          'marker.symbol': [symbols],
-          'marker.line.color': [lineColors],
-          'marker.line.width': [lineWidths]
-        },
-        [0]
-      );
-
-      updateQueryTrace();
       updateDistanceTable();
+
     }
+
+
 
     /* ============================ DISTANCE TABLE ================================= */
     const distanceTableBody = document.querySelector('#distance-table tbody');
@@ -1778,6 +1817,106 @@ function focusQueryInScatter() {
         </div>
       `;
     }
+
+
+    /* ===================== STEP-GUIDE ===================== */
+    const howSteps = document.querySelectorAll('.how-step');
+    const howTitle = document.getElementById('how-step-title');
+    const howText = document.getElementById('how-step-text');
+
+    const HOW = {
+      1: {
+        title: '1 · Model memory',
+        html:
+        'FlowerLens starts with a small training dataset of labelled flower images. ' +
+        'This is the model’s memory. You can explore it in the ' +
+        '<a href="#view-dataset">Explore the training data</a>.',
+        scrollTo: 'view-dataset',
+        glow: 'view-dataset'
+      },
+      2: {
+        title: '2 · Your flower',
+        html:
+        'Upload a flower image in the chat. FlowerLens extracts features and places your flower in the same space as the training data. ' +
+        '<a href="#view-assistant">Upload your flower</a>.',
+        scrollTo: 'view-assistant',
+        glow: 'view-assistant'
+      },
+      3: {
+        title: '3 · Feature space',
+        html:
+        'Each flower is represented as a point in the scatter plot. Similar flowers appear closer together. ' +
+        '<a href="#feature-space">See the scatter plot</a>.',
+        scrollTo: 'feature-space',
+        glow: 'feature-space'
+      },
+      4: {
+        title: '4 · Measure distances',
+        html:
+        'The model computes distances from your flower to every training point using the chosen metric (Euclidean/Manhattan/Minkowski). ' +
+        '<a href="#distance-explanation">See how distance is calculated</a>.',        scrollTo: 'distance-explanation',
+        glow: 'distance-explanation'
+      },
+      5: {
+         title: '5 · Nearest neighbours',
+          html:
+          'The <strong>k</strong> closest points become the neighbours. In the scatter plot, they are highlighted with a gold ring. ' +
+          '<a href="#feature-space">View the highlighted neighbours in the scatter plot</a>.',
+          scrollTo: 'feature-space',
+          glow: 'feature-space'
+        },
+        6: {
+          title: '6 · Neighbour vote',
+          html:
+          'Only the <strong>k</strong> neighbours vote. The class with the most votes becomes the prediction, and confidence depends on how dominant the winner is. ' +
+          '<a href="#vote-summary">Jump to the vote summary</a>.',
+          scrollTo: 'vote-summary',
+          glow: 'vote-summary'
+        },
+        7: {
+          title: '7 · Explanation',
+          html:
+          'All panels work together: the chat explains the prediction in words, the dataset view shows the model’s memory, and the distances + vote show why the result happens. ' +
+          '<a href="#heatmap-explainer-card">View the visual explanation</a>.',
+          scrollTo: 'heatmap-explainer-card',
+          glow: 'heatmap-explainer-card'
+        }
+      };
+
+
+    function glowTarget(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('step-target-glow');
+      window.setTimeout(() => el.classList.remove('step-target-glow'), 1200);
+    }
+    function setHowStep(stepNum, { shouldScroll = false } = {}) {
+      const cfg = HOW[stepNum];
+      if (!cfg) return;
+      howSteps.forEach((b) => b.classList.toggle('active', Number(b.dataset.step) === stepNum));
+      if (howTitle) howTitle.textContent = cfg.title;
+      if (howText) howText.innerHTML = cfg.html;
+      if (shouldScroll && cfg.scrollTo && typeof scrollToSection === 'function') {
+        scrollToSection(cfg.scrollTo);
+        if (cfg.glow) setTimeout(() => glowTarget(cfg.glow), 250);
+      }
+    }
+    howSteps.forEach((btn) => {
+      btn.addEventListener('click', () =>
+      setHowStep(Number(btn.dataset.step), { shouldScroll: false })
+    );
+  });
+
+    document.getElementById('how-it-works')?.addEventListener('click', (e) => {
+      const a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      const target = a.getAttribute('href')?.slice(1);
+      if (target && typeof scrollToSection === 'function') {
+        e.preventDefault();
+        scrollToSection(target);
+      }
+    });
+
 
     renderDatasetTable();
     initScatterPlot();
