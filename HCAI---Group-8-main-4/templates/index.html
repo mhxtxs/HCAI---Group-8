@@ -564,6 +564,35 @@
           </div>
         </div>
 
+        <div class="compare-controls">
+           <div class="param-group">
+            <label for="compare-main-k">
+              Number of neighbours <span class="badge" id="compare-main-k-value">5</span>
+            </label>
+            <input id="compare-main-k" type="range" min="1" max="25" step="1" value="5" />
+          </div>
+          <div class="param-group">
+            <label for="compare-main-metric">Distance metric</label>
+            <select id="compare-main-metric">
+              <option value="euclidean">Euclidean distance</option>
+              <option value="manhattan">Manhattan distance</option>
+              <option value="minkowski">Minkowski distance (p-th order)</option>
+            </select>
+            <p id="compare-main-metric-description" class="param-help">
+              Euclidean distance measures straight-line distance like with a ruler.
+            </p>
+          </div>
+          <div class="param-group" id="compare-main-p-wrap" style="display:none;">
+            <label for="compare-main-p-slider">Minkowski order (p)</label>
+            <div class="p-row">
+              <input id="compare-main-p-slider" type="range" min="1" max="6" step="0.1" value="2" />
+              <span id="compare-main-p-value">p = 2.0</span>
+            </div>
+            <p class="param-help">p = 1 → Manhattan · p = 2 → Euclidean</p>
+          </div>
+        </div>
+
+
         <div id="compare-plot-main" class="plot compare-plot"></div>
         <div class="compare-result" id="compare-main-result"></div>
 
@@ -804,6 +833,14 @@
     const compareMetricDesc = document.getElementById('compare-metric-description');
     const comparePWrap = document.getElementById('compare-p-wrap');
     const comparePSlider = document.getElementById('compare-p-slider');
+    const compareMainK = document.getElementById('compare-main-k');
+    const compareMainKValue = document.getElementById('compare-main-k-value');
+    const compareMainMetric = document.getElementById('compare-main-metric');
+    const compareMainMetricDesc = document.getElementById('compare-main-metric-description');
+    const compareMainPWrap = document.getElementById('compare-main-p-wrap');
+    const compareMainPSlider = document.getElementById('compare-main-p-slider');
+    const compareMainPValue = document.getElementById('compare-main-p-value');
+
     const comparePValue = document.getElementById('compare-p-value');
     const compareMainResult = document.getElementById('compare-main-result');
     const compareAltResult = document.getElementById('compare-alt-result');
@@ -842,6 +879,38 @@ function updateComparePVisibility() {
   comparePWrap.style.display = show ? 'block' : 'none';
   compareAltPBadge.style.display = show ? 'inline-flex' : 'none';
 }
+
+function updateMainModalMetricHelp() {
+  if (!compareMainMetricDesc || !compareMainMetric) return;
+  const v = compareMainMetric.value;
+  compareMainMetricDesc.textContent =
+    v === 'euclidean'
+      ? 'Euclidean distance measures straight-line distance, like a ruler.'
+      : v === 'manhattan'
+      ? 'Manhattan distance adds absolute differences along each feature.'
+      : 'Minkowski generalises both Euclidean (p=2) and Manhattan (p=1).';
+}
+
+function updateMainModalPVisibility() {
+  if (!compareMainPWrap || !compareMainMetric) return;
+  compareMainPWrap.style.display = compareMainMetric.value === 'minkowski' ? 'block' : 'none';
+}
+
+function setMainModalControlsFromMainSettings() {
+  if (!compareMainK || !compareMainMetric || !compareMainPSlider) return;
+  const s = getMainSettings();
+
+  compareMainK.value = String(s.k);
+  if (compareMainKValue) compareMainKValue.textContent = String(s.k);
+
+  compareMainMetric.value = s.metric;
+  updateMainModalMetricHelp();
+  updateMainModalPVisibility();
+
+  compareMainPSlider.value = String(s.p ?? 2);
+  if (compareMainPValue) compareMainPValue.textContent = `p = ${Number(compareMainPSlider.value).toFixed(1)}`;
+}
+
 
 function updateMainPVisibilityBadge() {
   const show = metricSelect.value === 'minkowski';
@@ -890,6 +959,8 @@ function openComparisonView({ seedCompareSettings } = {}) {
   compareModal.classList.add('open');
   compareModal.setAttribute('aria-hidden', 'false');
   document.body.classList.add('modal-open');
+  setMainModalControlsFromMainSettings();
+
 
   if (!compareResizeObserver && window.ResizeObserver) {
     const dialog = compareModal.querySelector('.comparison-dialog');
@@ -1104,8 +1175,9 @@ function updateComparisonBadges() {
   const main = getMainSettings();
   const alt = getCompareSettings();
 
-  const metricNameMain = metricSelect.options[metricSelect.selectedIndex].text.split(' ')[0];
+  const metricNameMain = (compareMainMetric || metricSelect).options[(compareMainMetric || metricSelect).selectedIndex].text.split(' ')[0];
   const metricNameAlt = compareMetric.options[compareMetric.selectedIndex].text.split(' ')[0];
+
 
   compareMainBadge.textContent = `k = ${main.k} · ${metricNameMain}`;
   compareAltBadge.textContent = `k = ${alt.k} · ${metricNameAlt}`;
@@ -1185,6 +1257,38 @@ if (comparePSlider) {
   });
 }
 
+if (compareMainK) {
+  compareMainK.addEventListener('input', () => {
+    if (!kSlider) return;
+    kSlider.value = compareMainK.value;
+    kSlider.dispatchEvent(new Event('input'));
+    if (compareMainKValue) compareMainKValue.textContent = compareMainK.value;
+  });
+}
+
+if (compareMainMetric) {
+  compareMainMetric.addEventListener('change', () => {
+    if (!metricSelect) return;
+    metricSelect.value = compareMainMetric.value;
+    metricSelect.dispatchEvent(new Event('change'));
+    updateMainModalMetricHelp();
+    updateMainModalPVisibility();
+    updateComparisonBadges();
+  });
+}
+
+
+if (compareMainPSlider) {
+  compareMainPSlider.addEventListener('input', () => {
+    if (!pSlider) return;
+    pSlider.value = compareMainPSlider.value;
+    pSlider.dispatchEvent(new Event('input'));
+    if (compareMainPValue) compareMainPValue.textContent = `p = ${Number(compareMainPSlider.value).toFixed(1)}`;
+  });
+}
+
+
+
 if (compareSwapBtn) {
   compareSwapBtn.addEventListener('click', () => {
     const main = getMainSettings();
@@ -1218,7 +1322,9 @@ pSlider.addEventListener('change', handleMainSettingsCommitted);
 metricSelect.addEventListener('change', handleMainSettingsCommitted);
 
 function syncComparisonIfOpen() {
-  if (isComparisonOpen()) renderComparisonPlots();
+  if (!isComparisonOpen()) return;
+  setMainModalControlsFromMainSettings();
+  renderComparisonPlots();
 }
 
 
