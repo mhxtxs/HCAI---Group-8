@@ -668,6 +668,13 @@
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
     );
   }
+  function baseClassJs(label) {
+    const s = String(label || '').toLowerCase();
+    if (s.includes('setosa')) return 'Setosa';
+    if (s.includes('versicolor')) return 'Versicolor';
+    if (s.includes('virginica')) return 'Virginica';
+    return 'Unknown';
+  }
 
 
     let minkowskiP = 2.0;
@@ -1440,9 +1447,10 @@ function syncComparisonIfOpen() {
             <td>${p.inTraining ? 'Yes' : 'No'}</td>
           `;
           tr.addEventListener('click', () => {
-            selectDatasetRow(p.id);
             showPointDetails(p);
+            selectDatasetRow(p.id);
           });
+
           datasetTableBody.appendChild(tr);
         });
     }
