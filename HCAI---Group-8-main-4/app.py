@@ -1,7 +1,6 @@
 import os
 import io
 import json
-import math
 import numpy as np
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
@@ -13,10 +12,6 @@ import uuid
 from werkzeug.utils import secure_filename
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.preprocessing import StandardScaler
-
-
-
-
 
 app = Flask(
     __name__,
@@ -34,8 +29,6 @@ os.makedirs(HEATMAP_DIR, exist_ok=True)
 
 PUBLIC_IMAGE_DIR = os.path.join(app.static_folder, "training_images")
 os.makedirs(PUBLIC_IMAGE_DIR, exist_ok=True)
-
-
 
 DEFAULT_DATASET = [
     {
@@ -103,26 +96,58 @@ DEFAULT_DATASET = [
     },
 ]
 
-
 FLOWER_INFO = {
     "Setosa": {
         "summary": "Small compact flower.\nFound mostly in cool climates."
     },
     "Versicolor": {
-        "summary": "Medium-sized violet flower.\nOften grows in marshy environments."
+        "summary": "Medium-sized flower.\nOften grows in marshy environments."
     },
     "Virginica": {
-        "summary": "Large blue-purple petals.\nCommon in wetlands and moist forests."
+        "summary": "Large petals.\nCommon in wetlands and moist forests."
     }
 }
 
-
 ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 
+def base_class(label):
+    s = label.lower()
+    if "setosa" in s:
+        return "Setosa"
+    if "versicolor" in s:
+        return "Versicolor"
+    if "virginica" in s:
+        return "Virginica"
+    return "Unknown"
+
+def image_to_features(image_bytes):
+    try:
+        img = Image.open(image_bytes).convert("RGB")
+        img = img.resize((64, 64))
+        arr = np.array(img) / 255.0
+        mean_r = arr[:, :, 0].mean()
+        mean_g = arr[:, :, 1].mean()
+        mean_b = arr[:, :, 2].mean()
+        brightness = arr.mean()
+        return np.array([mean_r, mean_g, mean_b, brightness])
+    except Exception as e:
+        print("IMAGE FEATURE ERROR:", e)
+        return None
+
+def compute_distance(p1, p2, metric="euclidean", p=2):
+    a = np.asarray(p1, dtype=float)
+    b = np.asarray(p2, dtype=float)
+    if a.shape != b.shape:
+        raise ValueError("Vector shape mismatch")
+    diff = np.abs(a - b)
+    if metric == "manhattan":
+        return float(diff.sum())
+    if metric == "minkowski":
+        return float((diff ** p).sum() ** (1.0 / p))
+    return float(np.sqrt(((a - b) ** 2).sum()))
+
 def _iter_training_image_paths():
-    candidate_dirs = [
-        IMAGE_DIR,
-    ]
+    candidate_dirs = [IMAGE_DIR]
     seen = set()
     for d in candidate_dirs:
         if not os.path.isdir(d):
@@ -168,6 +193,10 @@ def _looks_like_iris_measurements(dataset):
     except Exception:
         return True
 
+def save_dataset(dataset):
+    with open(DATASET_FILE, "w") as f:
+        json.dump(dataset, f, indent=4)
+
 def load_dataset():
     dataset = None
     if os.path.exists(DATASET_FILE):
@@ -192,53 +221,6 @@ def load_dataset():
 
     return dataset
 
-
-
-def save_dataset(dataset):
-    with open(DATASET_FILE, "w") as f:
-        json.dump(dataset, f, indent=4)
-
-
-def image_to_features(image_bytes):
-    try:
-        img = Image.open(image_bytes).convert("RGB")
-        img = img.resize((64, 64))
-        arr = np.array(img) / 255.0
-
-        mean_r = arr[:, :, 0].mean()
-        mean_g = arr[:, :, 1].mean()
-        mean_b = arr[:, :, 2].mean()
-        brightness = arr.mean()
-
-        return np.array([mean_r, mean_g, mean_b, brightness])
-    except Exception as e:
-        print("IMAGE FEATURE ERROR:", e)
-        return None
-
-def compute_distance(p1, p2, metric="euclidean", p=2):
-    a = np.asarray(p1, dtype=float)
-    b = np.asarray(p2, dtype=float)
-    if a.shape != b.shape:
-        raise ValueError("Vector shape mismatch")
-    diff = np.abs(a - b)
-    if metric == "manhattan":
-        return float(diff.sum())
-    if metric == "minkowski":
-        return float((diff ** p).sum() ** (1.0 / p))
-    return float(np.sqrt(((a - b) ** 2).sum()))
-
-
-def base_class(label):
-    s = label.lower()
-    if "setosa" in s:
-        return "Setosa"
-    if "versicolor" in s:
-        return "Versicolor"
-    if "virginica" in s:
-        return "Virginica"
-    return "Unknown"
-
-
 def knn_predict(query_vec, dataset, k, metric, p, vector_key="coords"):
     distances = []
     for point in dataset:
@@ -255,29 +237,19 @@ def knn_predict(query_vec, dataset, k, metric, p, vector_key="coords"):
         votes[c] = votes.get(c, 0) + 1
     return max(votes.items(), key=lambda x: x[1])[0]
 
-
 def generate_heatmap(img_bytes):
-    """
-    Creates a saliency-style gradient heatmap.
-    """
     img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
     img = img.resize((256, 256))
     arr = np.array(img).astype(np.float32)
-
     gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
-
     gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0)
     gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1)
     grad = np.sqrt(gx ** 2 + gy ** 2)
-
     grad_norm = cv2.normalize(grad, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-
     heatmap = cv2.applyColorMap(grad_norm, cv2.COLORMAP_JET)
     overlay = cv2.addWeighted(arr.astype(np.uint8), 0.5, heatmap, 0.5, 0)
-
     output_path = os.path.join(HEATMAP_DIR, "last_heatmap.jpg")
     cv2.imwrite(output_path, overlay)
-
     return "/static/heatmaps/last_heatmap.jpg"
 
 def fit_projector(dataset):
@@ -299,21 +271,15 @@ def fit_projector(dataset):
     coords = pca.fit_transform(feats)
     return ("pca", None, pca), coords
 
-
 def project_query(projector, query_features):
     if projector is None:
         return [0.0, 0.0]
-
     kind, scaler, model = projector
     q = np.asarray(query_features, dtype=float).reshape(1, -1)
-
     if kind == "lda":
         q = scaler.transform(q)
         return model.transform(q)[0].tolist()
-
     return model.transform(q)[0].tolist()
-
-
 
 @app.route("/")
 def index():
@@ -324,7 +290,6 @@ def index():
 def model_card():
     return render_template("model-card.html")
 
-
 @app.route("/api/predict", methods=["POST"])
 def predict():
     if "file" not in request.files:
@@ -333,47 +298,34 @@ def predict():
     file = request.files["file"]
     img_bytes = file.read()
 
-    # ENCODE ORIGINAL IMAGE IN BASE64
     original_b64 = base64.b64encode(img_bytes).decode("utf-8")
     original_data_uri = "data:image/jpeg;base64," + original_b64
 
-    # IMAGE TO FEATURES
     features = image_to_features(io.BytesIO(img_bytes))
     if features is None:
         return jsonify({"error": "Invalid image"}), 400
-    
+
     dataset = load_dataset()
     projector, coords = fit_projector(dataset)
     for p, c in zip(dataset, coords):
         p["coords"] = c.tolist()
-        query_coords = project_query(projector, features)
+    query_coords = project_query(projector, features)
 
-    
-
-
-
-    # READ FRONTEND PARAMETERS (optional, but wired)
     k = int(request.form.get("k", 5))
     metric = request.form.get("metric", "euclidean")
     mink_p = float(request.form.get("p", 2))
 
-    # --- SIMILARITY CALCULATION ---
-
     distances = [
         compute_distance(features, p["features"], metric, mink_p)
         for p in dataset
-        ]
-    closest_d = min(distances)
+    ]
+    closest_d = min(distances) if distances else 0.0
     similarity_score = max(0, 1 - (closest_d / (closest_d + 1))) * 100
     similarity_score = round(similarity_score, 2)
 
-    # --- KNN PREDICTION ---
     prediction = knn_predict(features, dataset, k, metric, mink_p, vector_key="features")
-
-    # --- HEATMAP ---
     heatmap_url = generate_heatmap(img_bytes)
 
-    # SHORT SUMMARY (2 lines) based on predicted class
     summary = FLOWER_INFO.get(
         prediction,
         {"summary": "No description available.\nUnknown habitat."}
@@ -389,7 +341,6 @@ def predict():
         "summary": summary
     })
 
-
 @app.route("/api/chat", methods=["POST"])
 def chat():
     msg = (request.get_json() or {}).get("message", "").lower()
@@ -403,47 +354,33 @@ def chat():
         return jsonify({"reply": "Setosa is usually small and compact, often found in cool climates."})
 
     if "versicolor" in msg:
-        return jsonify({"reply": "Versicolor is a medium-sized violet flower that often grows in marshy areas."})
+        return jsonify({"reply": "Versicolor is medium-sized and often grows in marshy areas."})
 
     if "virginica" in msg:
-        return jsonify({"reply": "Virginica has large blue-purple petals and likes wetland habitats."})
+        return jsonify({"reply": "Virginica has larger petals and often grows in wetland habitats."})
 
     return jsonify({
         "reply": "You can ask me about how KNN works or about Setosa, Versicolor, or Virginica."
     })
-
 
 def _next_dataset_id(dataset):
     ids = []
     for p in dataset:
         try:
             ids.append(int(p.get("id")))
-        except:
+        except Exception:
             pass
     return (max(ids) if ids else 0) + 1
 
-def _fit_pca_on_dataset(dataset):
-    feats = np.asarray([p.get("features", []) for p in dataset], dtype=float) if dataset else np.zeros((0, 4))
-    if len(dataset) < 2:
-        return None, np.zeros((len(dataset), 2), dtype=float)
-    pca = PCA(n_components=2)
-    coords = pca.fit_transform(feats)
-    return pca, coords
-
-
-
-
 def _dataset_points_for_frontend(dataset):
     projector, coords = fit_projector(dataset)
-
     out = []
     for p, c in zip(dataset, coords):
         pid = p.get("id")
         try:
             pid_num = int(pid)
-        except:
+        except Exception:
             pid_num = pid
-
         out.append({
             "id": pid_num,
             "label": p.get("label", ""),
@@ -454,11 +391,6 @@ def _dataset_points_for_frontend(dataset):
             "image": p.get("image", "")
         })
     return out
-
-
-
-
-
 
 @app.route("/api/dataset", methods=["GET"])
 def api_dataset():
@@ -544,13 +476,11 @@ def api_dataset_remove():
         if os.path.isfile(fp):
             try:
                 os.remove(fp)
-            except:
+            except Exception:
                 pass
 
     save_dataset(new_ds)
     return jsonify({"removed": rid, "dataset": _dataset_points_for_frontend(new_ds)})
-
-
 
 if __name__ == "__main__":
     app.run(debug=True)
