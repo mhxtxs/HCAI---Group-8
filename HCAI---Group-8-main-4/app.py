@@ -10,9 +10,7 @@ from sklearn.decomposition import PCA
 import base64
 import cv2
 
-# -----------------------------------------------------------
-# INITIAL SETUP
-# -----------------------------------------------------------
+
 app = Flask(
     __name__,
     template_folder="templates",
@@ -27,9 +25,7 @@ HEATMAP_DIR = "static/heatmaps"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 os.makedirs(HEATMAP_DIR, exist_ok=True)
 
-# -----------------------------------------------------------
-# DEFAULT DATASET
-# -----------------------------------------------------------
+
 DEFAULT_DATASET = [
     {
         "id": "1",
@@ -96,9 +92,7 @@ DEFAULT_DATASET = [
     },
 ]
 
-# -----------------------------------------------------------
-# FLOWER SHORT SUMMARIES (your chosen options)
-# -----------------------------------------------------------
+
 FLOWER_INFO = {
     "Setosa": {
         "summary": "Small compact flower.\nFound mostly in cool climates."
@@ -111,9 +105,7 @@ FLOWER_INFO = {
     }
 }
 
-# -----------------------------------------------------------
-# LOAD / SAVE DATASET
-# -----------------------------------------------------------
+
 def load_dataset():
     if not os.path.exists(DATASET_FILE):
         return [dict(p) for p in DEFAULT_DATASET]
@@ -130,9 +122,7 @@ def save_dataset(dataset):
     with open(DATASET_FILE, "w") as f:
         json.dump(dataset, f, indent=4)
 
-# -----------------------------------------------------------
-# IMAGE FEATURE EXTRACTION
-# -----------------------------------------------------------
+
 def image_to_features(image_bytes):
     try:
         img = Image.open(image_bytes).convert("RGB")
@@ -149,9 +139,6 @@ def image_to_features(image_bytes):
         print("IMAGE FEATURE ERROR:", e)
         return None
 
-# -----------------------------------------------------------
-# DISTANCE METRICS
-# -----------------------------------------------------------
 def compute_distance(p1, p2, metric="euclidean", p=2):
     dx = p1[0] - p2[0]
     dy = p1[1] - p2[1]
@@ -164,9 +151,7 @@ def compute_distance(p1, p2, metric="euclidean", p=2):
 
     return math.sqrt(dx * dx + dy * dy)
 
-# -----------------------------------------------------------
-# KNN PREDICTION
-# -----------------------------------------------------------
+
 def base_class(label):
     s = label.lower()
     if "setosa" in s:
@@ -195,9 +180,6 @@ def knn_predict(query_vec, dataset, k, metric, p):
     # return class name: "Setosa" / "Versicolor" / "Virginica"
     return max(votes.items(), key=lambda x: x[1])[0]
 
-# -----------------------------------------------------------
-# HEATMAP GENERATOR
-# -----------------------------------------------------------
 def generate_heatmap(img_bytes):
     """
     Creates a saliency-style gradient heatmap.
@@ -222,9 +204,6 @@ def generate_heatmap(img_bytes):
 
     return "/static/heatmaps/last_heatmap.jpg"
 
-# -----------------------------------------------------------
-# HOME PAGE
-# -----------------------------------------------------------
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -234,9 +213,7 @@ def index():
 def model_card():
     return render_template("model-card.html")
 
-# -----------------------------------------------------------
-# API: PREDICT + RETURN HEATMAP + ORIGINAL IMAGE (BASE64)
-# -----------------------------------------------------------
+
 @app.route("/api/predict", methods=["POST"])
 def predict():
     if "file" not in request.files:
@@ -304,9 +281,7 @@ def predict():
         "summary": summary
     })
 
-# -----------------------------------------------------------
-# API: CHAT (for follow-up questions without image)
-# -----------------------------------------------------------
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     msg = (request.get_json() or {}).get("message", "").lower()
@@ -329,8 +304,6 @@ def chat():
         "reply": "You can ask me about how KNN works or about Setosa, Versicolor, or Virginica."
     })
 
-# -----------------------------------------------------------
-# RUN SERVER
-# -----------------------------------------------------------
+
 if __name__ == "__main__":
     app.run(debug=True)
