@@ -106,16 +106,82 @@ FLOWER_INFO = {
 }
 
 
+ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
+
+def _iter_training_image_paths():
+    candidate_dirs = [
+        os.path.join(app.static_folder, "images"),
+        IMAGE_DIR,
+    ]
+    seen = set()
+    for d in candidate_dirs:
+        if not os.path.isdir(d):
+            continue
+        for fn in os.listdir(d):
+            ext = os.path.splitext(fn)[1].lower()
+            if ext not in ALLOWED_IMAGE_EXTS:
+                continue
+            stem = os.path.splitext(fn)[0].replace("_", " ").lower()
+            if base_class(stem) == "Unknown":
+                continue
+            path = os.path.join(d, fn)
+            if path in seen:
+                continue
+            seen.add(path)
+            yield path
+
+def build_dataset_from_images():
+    paths = sorted(list(_iter_training_image_paths()))
+    points = []
+    for i, path in enumerate(paths, start=1):
+        label = os.path.splitext(os.path.basename(path))[0].replace("_", " ")
+        with open(path, "rb") as f:
+            feats = image_to_features(io.BytesIO(f.read()))
+        if feats is None:
+            continue
+        url_path = "/" + path.replace("\\", "/")
+        points.append({
+            "id": str(i),
+            "label": label,
+            "image": url_path,
+            "features": feats.tolist(),
+            "coords": [0.0, 0.0],
+        })
+    return points
+
+def _looks_like_iris_measurements(dataset):
+    try:
+        feats = np.asarray([p.get("features", []) for p in dataset], dtype=float)
+        if feats.size == 0:
+            return True
+        return float(np.nanmax(feats)) > 1.2
+    except Exception:
+        return True
+
 def load_dataset():
-    if not os.path.exists(DATASET_FILE):
+    dataset = None
+    if os.path.exists(DATASET_FILE):
+        try:
+            with open(DATASET_FILE, "r") as f:
+                dataset = json.load(f)
+        except Exception:
+            dataset = None
+
+    if not dataset:
+        rebuilt = build_dataset_from_images()
+        if rebuilt:
+            save_dataset(rebuilt)
+            return rebuilt
         return [dict(p) for p in DEFAULT_DATASET]
 
-    try:
-        with open(DATASET_FILE, "r") as f:
-            data = json.load(f)
-        return data if data else [dict(p) for p in DEFAULT_DATASET]
-    except:
-        return [dict(p) for p in DEFAULT_DATASET]
+    if _looks_like_iris_measurements(dataset):
+        rebuilt = build_dataset_from_images()
+        if rebuilt:
+            save_dataset(rebuilt)
+            return rebuilt
+
+    return dataset
+
 
 
 def save_dataset(dataset):
@@ -140,16 +206,16 @@ def image_to_features(image_bytes):
         return None
 
 def compute_distance(p1, p2, metric="euclidean", p=2):
-    dx = p1[0] - p2[0]
-    dy = p1[1] - p2[1]
-
+    a = np.asarray(p1, dtype=float)
+    b = np.asarray(p2, dtype=float)
+    if a.shape != b.shape:
+        raise ValueError("Vector shape mismatch")
+    diff = np.abs(a - b)
     if metric == "manhattan":
-        return abs(dx) + abs(dy)
-
+        return float(diff.sum())
     if metric == "minkowski":
-        return (abs(dx) ** p + abs(dy) ** p) ** (1 / p)
-
-    return math.sqrt(dx * dx + dy * dy)
+        return float((diff ** p).sum() ** (1.0 / p))
+    return float(np.sqrt(((a - b) ** 2).sum()))
 
 
 def base_class(label):
@@ -163,22 +229,22 @@ def base_class(label):
     return "Unknown"
 
 
-def knn_predict(query_vec, dataset, k, metric, p):
+def knn_predict(query_vec, dataset, k, metric, p, vector_key="coords"):
     distances = []
     for point in dataset:
-        d = compute_distance(query_vec, point["coords"], metric, p)
+        vec = point.get(vector_key)
+        if vec is None:
+            continue
+        d = compute_distance(query_vec, vec, metric, p)
         distances.append((d, point["label"]))
-
     distances.sort(key=lambda x: x[0])
-    nearest = distances[:k]
-
+    nearest = distances[: max(1, min(int(k), len(distances)))]
     votes = {}
     for _, label in nearest:
         c = base_class(label)
         votes[c] = votes.get(c, 0) + 1
-
-    # return class name: "Setosa" / "Versicolor" / "Virginica"
     return max(votes.items(), key=lambda x: x[1])[0]
+
 
 def generate_heatmap(img_bytes):
     """
@@ -260,7 +326,7 @@ def predict():
     similarity_score = round(similarity_score, 2)
 
     # --- KNN PREDICTION ---
-    prediction = knn_predict(query_coords, dataset, k, metric, mink_p)
+    prediction = knn_predict(features, dataset, k, metric, mink_p, vector_key="features")
 
     # --- HEATMAP ---
     heatmap_url = generate_heatmap(img_bytes)
