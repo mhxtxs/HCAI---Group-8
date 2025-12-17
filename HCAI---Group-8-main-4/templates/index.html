@@ -145,17 +145,19 @@
       <div class="chat-header-row">
         <h2>Ask FlowerLens</h2>
 
-        <!-- Settings toggle (icon) -->
         <button
-          id="toggle-settings"
-          class="icon-btn"
-          type="button"
-          aria-label="Toggle KNN settings"
-          aria-expanded="true"
-          title="KNN settings"
+        id="toggle-settings"
+        class="icon-btn"
+        type="button"
+        aria-label="Toggle KNN settings"
+        aria-expanded="true"
+        title="KNN settings"
         >
-          ⚙️
-        </button>
+        <span class="icon-btn-icon" aria-hidden="true">⚙️</span>
+        <span class="icon-btn-label">Settings</span>
+
+      </button>
+
       </div>
 
       <!-- Small settings summary -->
@@ -223,49 +225,97 @@
 
     <!-- ========= RIGHT SIDE: SETTINGS ======== -->
     <aside class="side-panel">
+
       <section class="side-card">
-        <h2 class="side-title">Settings for the KNN Algorithm</h2>
+        <header class="side-head">
+           <div class="side-head-text">
+            <h2 class="side-title">KNN settings</h2>
+            <p class="side-subtitle">Controls how neighbours are selected for the prediction.</p>
+          </div>
+          <div class="side-badges" aria-label="Current settings">
+            <span class="badge" id="side-badge-k">k = 5</span>
+            <span class="badge badge-soft" id="side-badge-metric">Euclidean</span>
+          </div>
+        </header>
 
-        <!-- K -->
-        <div class="param-group">
-          <label for="k-slider">
-            Number of neighbours <span class="badge" id="k-value">5</span>
-          </label>
-          <input id="k-slider" type="range" min="1" max="25" step="1" value="5" />
-          <p class="param-help">
-            <strong>k</strong> controls how many neighbours vote.
-            Small k → sensitive to noise.
-            Large k → smoother but less detailed.
-          </p>
+        <div class="settings-section">
+          <!-- ===================== K SETTING ===================== -->
+           <div class="field">
+            <div class="setting-head">
+              <h3 class="setting-title">Number of neighbours (k)</h3>
+              <p class="setting-subtitle">
+                Controls how many training flowers are used to decide the prediction for your uploaded flower.
+              </p>
+            </div>
+            <div class="field-label-row">
+              <label for="k-slider" class="setting-label">Choose k</label>
+              <span class="pill badge" id="k-value">5</span>
+            </div>
+            <input id="k-slider" class="range" type="range" min="1" max="25" step="1" value="5" />
+            <p class="param-help" id="k-help">
+              <strong>k</strong> is how many nearby flowers get to vote on what your uploaded flower is.
+              In the plot, FlowerLens highlights the <strong>k</strong> closest flowers to your upload (gold ring).
+              Only these highlighted flowers vote for the prediction.
+              <br><br>
+              <strong>Lower k</strong> → focuses on the very closest ones. <br>
+              <strong>Higher k</strong> → uses more neighbours, but can include less similar flowers.
+            </p>
+          </div>
+          <!-- ===================== METRIC SETTING ===================== -->
+           <div class="field">
+            <div class="setting-head">
+              <h3 class="setting-title">Distance metric</h3>
+              <p class="setting-subtitle">
+                Defines what “similar” means when your flower is compared to the training data.
+              </p>
+            </div>
+            <div class="field-label-row">
+              <label for="metric-select" class="setting-label">Choose a distance metric</label>
+            </div>
+            <div class="select-wrap">
+              <select id="metric-select" class="select">
+                <option value="euclidean">Euclidean distance</option>
+                <option value="manhattan">Manhattan distance</option>
+                <option value="minkowski">Minkowski distance (p-th order)</option>
+              </select>
+            </div>
+            <p id="metric-description" class="param-help">
+              <strong>Euclidean</strong> → “straight-line” closeness: looks at the overall difference and picks the flowers that are most similar in total.
+            </p>
+
+
+          </div>
+
+
         </div>
 
-        <!-- Distance metric -->
-        <div class="param-group">
-          <label for="metric-select">Distance metric</label>
-          <select id="metric-select">
-            <option value="euclidean">Euclidean distance</option>
-            <option value="manhattan">Manhattan distance</option>
-            <option value="minkowski">Minkowski distance (p-th order)</option>
-          </select>
-          <p id="metric-description" class="param-help">
-            Euclidean distance measures straight-line distance like with a ruler.
+
+
+
+
+
+
+
+
+
+
+
+          <p class="param-note">
+            The chat uses these exact settings when making predictions.
           </p>
+          <div class="compare-actions">
+            <button class="btn-secondary btn-wide" id="btn-open-compare" type="button">
+              Open comparison view
+            </button>
+            <p class="param-help compare-help">
+              Compare two different <strong>k</strong> and distance-metric choices side-by-side.
+            </p>
+          </div>
         </div>
-
-        <p class="param-note">
-          The chat uses these exact settings when making predictions.
-        </p>
-
-        <div class="compare-actions">
-          <button class="btn-secondary" id="btn-open-compare" type="button">
-            Open comparison view
-          </button>
-          <p class="param-help compare-help">
-            Compare two different <strong>k</strong> and distance-metric choices side-by-side.
-          </p>
-        </div>
-
       </section>
+
+
+
     </aside>
 
   </section>
@@ -658,8 +708,13 @@
           </div>
         </div>
 
-
         <div id="compare-plot-main" class="plot compare-plot"></div>
+        <p class="plot-legend-note compare-legend">
+          <strong>Legend:</strong><br>
+          Coloured dots = flowers from the training data set<br>
+          Turquoise star = uploaded flower<br>
+          Gold ring = current k nearest neighbours
+        </p>
         <div class="compare-result" id="compare-main-result"></div>
 
       </section>
@@ -707,7 +762,14 @@
         </div>
 
         <div id="compare-plot-alt" class="plot compare-plot"></div>
+        <p class="plot-legend-note compare-legend">
+          <strong>Legend:</strong><br>
+          Coloured dots = flowers from the training data set<br>
+          Turquoise star = uploaded flower<br>
+          Gold ring = current k nearest neighbours
+        </p>
         <div class="compare-result" id="compare-alt-result"></div>
+
       </section>
     </div>
 
@@ -873,6 +935,47 @@ window.addEventListener('load', () => {
     const kValueBadge = document.getElementById('k-value');
     const metricSelect = document.getElementById('metric-select');
     const metricDescription = document.getElementById('metric-description');
+    const sideBadgeK = document.getElementById('side-badge-k');
+    const sideBadgeMetric = document.getElementById('side-badge-metric');
+    const METRIC_HELP = {
+      euclidean: `
+      <strong>Euclidean</strong> → “straight-line” closeness: looks at the overall difference and picks the flowers that are most similar in total.
+      `,
+      manhattan: `
+      <strong>Manhattan</strong> → “step-by-step” closeness: adds up the differences one feature at a time (like counting blocks on a grid).
+      `,
+      minkowski: `
+      <strong>Minkowski</strong> is a flexible distance method that can behave like the other two metrics.
+      It lets you blend both styles using <strong>p</strong>:
+      <br><br>
+      <strong>p = 1</strong> → works like <strong>Manhattan</strong> (adds up differences step-by-step).<br>
+      <strong>p = 2</strong> → works like <strong>Euclidean</strong> (overall straight-line similarity).<br><br>
+      If you increase <strong>p</strong> above 2, big differences matter more, so the “closest neighbours”
+      to your uploaded flower can change.
+      `
+    };
+    function renderMetricDescription() {
+      if (!metricDescription || !metricSelect) return;
+      metricDescription.innerHTML = METRIC_HELP[metricSelect.value] || '';
+    }
+
+    
+
+    function setRangeFill(el){
+      const min = Number(el.min || 0);
+      const max = Number(el.max || 100);
+      const val = Number(el.value || 0);
+      const p = ((val - min) / (max - min)) * 100;
+      el.style.setProperty('--range-p', `${p}%`);
+    }
+    function updateSideBadges(){
+      const metricName = metricSelect.options[metricSelect.selectedIndex].text.split(' ')[0];
+      if (sideBadgeK) sideBadgeK.textContent = `k = ${kSlider.value}`;
+      if (sideBadgeMetric) sideBadgeMetric.textContent = metricName;
+    }
+
+
+
     const summaryK = document.getElementById('summary-k');
     const summaryMetric = document.getElementById('summary-metric');
     const summaryK2 = document.getElementById('summary-k-2');
@@ -929,22 +1032,40 @@ if (settingsToggleBtn && mainAreaAssistant) {
       updateScatterHighlight();
       updateDistanceTable();
       syncComparisonIfOpen();
+      setRangeFill(kSlider);
+      updateSideBadges();
+
     });
+
+
+
+
 
     metricSelect.addEventListener('change', () => {
       const v = metricSelect.value;
-      metricDescription.textContent =
-        v === 'euclidean'
-          ? 'Euclidean distance measures straight-line distance, like a ruler.'
-          : v === 'manhattan'
-          ? 'Manhattan distance adds absolute differences along each feature.'
-          : 'Minkowski generalises both Euclidean (p=2) and Manhattan (p=1).';
+      metricDescription.innerHTML = `
+      <strong>Euclidean</strong> → “straight-line” closeness: looks at the overall difference and picks the flowers that are most similar in total.<br>
+      <strong>Manhattan</strong> → “step-by-step” closeness: adds up the differences one feature at a time (like counting blocks on a grid).<br><br>
+
+      <strong>Minkowski</strong> is a flexible distance method that can behave like the other two metrics.
+      It lets you blend both styles using <strong>p</strong>:
+      <br><br>
+      <strong>p = 1</strong> → works like <strong>Manhattan</strong> (adds up differences step-by-step).<br>
+      <strong>p = 2</strong> → works like <strong>Euclidean</strong> (overall straight-line similarity).<br><br>
+      If you increase <strong>p</strong> above 2, big differences matter more, so the “closest neighbours”
+      to your uploaded flower can change.
+      `;
+      renderMetricDescription();
       updateSettingsSummary();
+      setRangeFill(kSlider);
+      updateSideBadges();
       syncDistanceTabs(v);
       updateScatterHighlight();
       updateDistanceTable();
       syncComparisonIfOpen();
+      updateSideBadges();
     });
+
 
     /* ============================= EXPLANATION TABS ============================= */
     const distanceTabs = document.querySelectorAll('.distance-tab');
