@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
-  <!-- Inline styles for the heatmap card -->
   <style>
     body {
       background-image: url("{{ url_for('static', filename='images/bg_img.jpg') }}");
@@ -48,7 +47,7 @@
 <body>
   <main class="app-root">
 
-    <!-- ================= HEADER ================= -->
+    
     <header class="hero">
       <div class="hero-text">
         <h1 class="hero-title">FlowerLens</h1>
@@ -72,7 +71,7 @@
       </div>
     </header>
 
-    <!-- ================= STEP-GUIDE ================= -->
+  
      <section class="how-card" id="how-it-works">
        <div class="how-card-header">
         <h2>How FlowerLens works</h2>
@@ -124,7 +123,7 @@
     </section>
 
 
-    <!-- ================= VIEW TOGGLE ================= -->
+   
      <nav class="view-toggle" id="page-nav">
       <button class="view-tab active" type="button" data-view="view-assistant"> · Ask FlowerLens</button>
       <button class="view-tab" type="button" data-view="view-dataset"> · Training data &amp; feature space</button>
@@ -133,13 +132,11 @@
 
 
 
-    <!-- ====================================================================== -->
-<!--                                VIEW: CHAT                              -->
-<!-- ====================================================================== -->
+ 
 <section id="view-assistant" class="app-view active">
   <section class="main-area">
 
-    <!-- ========= CHAT PANEL ========= -->
+    
     <section class="chat-panel">
 
       <div class="chat-header-row">
@@ -160,7 +157,6 @@
 
       </div>
 
-      <!-- Small settings summary -->
       <div class="settings-summary" id="settings-summary">
         <span class="summary-label">Current KNN settings</span>
         <span class="summary-value" id="summary-k">k = 5</span>
@@ -214,7 +210,7 @@
         <input type="file" id="file-input" accept="image/*" hidden />
       </div>
 
-      <!-- Preview UNDER upload button -->
+     
       <div id="pending-preview" style="margin-top: 10px; text-align:center;"></div>
 
       <p class="chat-hint">
@@ -223,7 +219,7 @@
 
     </section>
 
-    <!-- ========= RIGHT SIDE: SETTINGS ======== -->
+    
     <aside class="side-panel">
 
       <section class="side-card">
@@ -239,7 +235,7 @@
         </header>
 
         <div class="settings-section">
-          <!-- ===================== K SETTING ===================== -->
+       
            <div class="field">
             <div class="setting-head">
               <h3 class="setting-title">Number of neighbours (k)</h3>
@@ -261,7 +257,6 @@
               <strong>Higher k</strong> → uses more neighbours, but can include less similar flowers.
             </p>
           </div>
-          <!-- ===================== METRIC SETTING ===================== -->
            <div class="field">
             <div class="setting-head">
               <h3 class="setting-title">Distance metric</h3>
@@ -324,9 +319,7 @@
 
 
 
-    <!-- =========================================================================== -->
-    <!--                         VIEW: DATASET + EXPLAINABILITY                      -->
-    <!-- =========================================================================== -->
+   
     <section id="view-dataset" class="app-view">
 
 
@@ -352,10 +345,10 @@
         </ul>
       </section>
 
-      <!-- ========================= DATASET & PLOT ========================== -->
+      
       <section class="dataset-area">
 
-        <!-- PLOT -->
+       
         <article class="plot-card" id="feature-space">
           <h2>Dataset in feature space</h2>
           <p class="plot-caption">
@@ -372,7 +365,7 @@
 </p>
         </article>
 
-        <!-- DATASET EXPLORER -->
+        
         <article class="plot-card">
           <h2>Dataset explorer</h2>
 
@@ -430,7 +423,7 @@
         </article>
       </section>
 
-      <!-- ===================== HEATMAP EXPLAINER CARD ====================== -->
+   
       <section class="plot-card" id="heatmap-explainer-card">
         <h2>Heatmap visual explanation</h2>
         <p class="plot-caption">
@@ -449,8 +442,7 @@
         </div>
       </section>
 
-      <!-- (Explainability long text sections – unchanged, omitted here for brevity if you want,
-           but you can keep all your existing neighbour influence / distance explanations) -->
+      
 
 
 
@@ -645,12 +637,12 @@
   </p>
 </section>
 
-      <!-- =========================== EXPLAINABILITY =============================== -->
-    </section> <!-- END VIEW DATASET -->
+      
+    </section> 
   </main>
 
 
-  <!-- ===================== COMPARISON VIEW (MODAL) ===================== -->
+  
 <div id="comparison-modal" class="comparison-modal" aria-hidden="true">
   <div id="comparison-backdrop" class="comparison-backdrop"></div>
 
@@ -669,7 +661,7 @@
     </header>
 
     <div class="comparison-grid">
-      <!-- CURRENT -->
+      
       <section class="comparison-panel">
         <div class="comparison-panel-head">
           <h3>Current</h3>
@@ -724,7 +716,7 @@
 
       </section>
 
-      <!-- COMPARISON -->
+    
       <section class="comparison-panel">
         <div class="comparison-panel-head">
           <h3>Comparison</h3>
@@ -794,13 +786,9 @@
 
 
 
-  <!-- =========================================================================== -->
-  <!--                               JAVASCRIPT LOGIC                              -->
-  <!-- =========================================================================== -->
+
   <script>
-    /* --------------------------------------------------------------
-       DATASET
-    -------------------------------------------------------------- */
+
     const datasetPoints = [
       { id: 1, label: 'iris setosa', x: 1.2, y: 0.8, source: 'Original dataset', inTraining: true, image: 'static/images/iris_setosa.jpg',
         features: { sepal_length: 5.1, sepal_width: 3.5, petal_length: 1.4, petal_width: 0.2 } },
@@ -940,7 +928,7 @@ window.addEventListener('load', () => {
 
 
 
-    /* ============================ PARAMETER CONTROLS =========================== */
+ 
     const kSlider = document.getElementById('k-slider');
     const kValueBadge = document.getElementById('k-value');
     const metricSelect = document.getElementById('metric-select');
@@ -991,7 +979,7 @@ window.addEventListener('load', () => {
     const summaryK2 = document.getElementById('summary-k-2');
     const summaryMetric2 = document.getElementById('summary-metric-2');
 
-/* ===================== SETTINGS PANEL COLLAPSE ===================== */
+
 const settingsToggleBtn = document.getElementById('toggle-settings');
 const mainAreaAssistant = document.querySelector('#view-assistant .main-area');
 
@@ -1077,7 +1065,7 @@ if (settingsToggleBtn && mainAreaAssistant) {
     });
 
 
-    /* ============================= EXPLANATION TABS ============================= */
+
     const distanceTabs = document.querySelectorAll('.distance-tab');
     const distancePanels = document.querySelectorAll('.distance-panel');
     function syncDistanceTabs(metric) {
@@ -1095,7 +1083,6 @@ if (settingsToggleBtn && mainAreaAssistant) {
       });
     });
 
-    /* ================ MINKOWSKI SLIDER ================= */
     const pSlider = document.getElementById('p-slider');
     const pValueLabel = document.getElementById('p-value');
     pSlider.addEventListener('input', () => {
@@ -1624,7 +1611,7 @@ function syncComparisonIfOpen() {
 
 
 
-    /* ================================ CHAT ==================================== */
+    
     const chatWindow = document.getElementById('chat-window');
     const similarityText = document.getElementById('similarityText');
 
@@ -1716,13 +1703,11 @@ function syncComparisonIfOpen() {
       const msg = document.getElementById('chat-input').value.trim();
       if (!msg && !pendingImageFile) return;
 
-      // Add user text message (if any)
       if (msg) {
         addChatMessage(msg, 'user');
         document.getElementById('chat-input').value = '';
       }
 
-      // If user uploaded an image → NOW send it, and do NOT also call /api/chat for this turn
       if (pendingImageFile) {
         const reader = new FileReader();
         reader.onload = (ev) => {
@@ -1762,11 +1747,10 @@ function syncComparisonIfOpen() {
             predictionData.heatmap_image;
         }
 
-        // Stop here – no /api/chat call for this message
+  
         return;
       }
 
-      // No image → normal chat
       if (msg) {
         sendToBackend(msg);
       }
@@ -1779,7 +1763,6 @@ function syncComparisonIfOpen() {
       }
     });
 
-    /* ================= IMAGE UPLOAD / QUERY POINT ===================== */
     const CHAT_UPLOAD_ID = 0; 
     let queryPoint = null;     
     let pendingImageFile = null;
@@ -1830,7 +1813,7 @@ function syncComparisonIfOpen() {
       showPointDetails(chatUploadEntry);
     }
 
-    /* =========================== DATASET TABLE ================================== */
+
     const datasetTableBody = document.querySelector('#dataset-table tbody');
     const classFilter = document.getElementById('class-filter');
     const removeBtn = document.getElementById('btn-remove-image');
@@ -2007,8 +1990,6 @@ function focusQueryInScatter() {
       `;
     }
 
-
-    /* ============================= SCATTER PLOT ============================= */
     let scatterInitialized = false;
     function resizeScatterSoon() {
       requestAnimationFrame(() => {
@@ -2183,7 +2164,7 @@ function attachScatterResizeObserver() {
 
 
 
-    /* ============================ DISTANCE TABLE ================================= */
+ 
     const distanceTableBody = document.querySelector('#distance-table tbody');
     const voteSummary = document.getElementById('vote-summary');
 
@@ -2299,7 +2280,6 @@ function attachScatterResizeObserver() {
     }
 
 
-    /* ===================== STEP-GUIDE ===================== */
     const howSteps = document.querySelectorAll('.how-step');
     const howTitle = document.getElementById('how-step-title');
     const howText = document.getElementById('how-step-text');
