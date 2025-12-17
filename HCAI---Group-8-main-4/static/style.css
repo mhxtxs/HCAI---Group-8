@@ -1,6 +1,4 @@
-/* =======================================================================
-   GLOBAL VARIABLES & BASE THEME
-======================================================================= */
+
 *,
 *::before,
 *::after {
@@ -38,9 +36,8 @@
   --badge-bg: rgba(15, 23, 42, 0.9);
 }
 
-/* =======================================================================
-   GLOBAL PAGE STYLING
-======================================================================= */
+
+
 html,
 body {
   margin: 0;
@@ -65,9 +62,7 @@ main.app-root {
   margin: 0 auto;
 }
 
-/* =======================================================================
-   HERO SECTION — MERGED + OPTIMIZED
-======================================================================= */
+
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
@@ -92,7 +87,7 @@ main.app-root {
 
 .hero::before,
 .hero::after {
-  content: none !important; /* removed extra glow overlaps */
+  content: none !important; 
 }
 
 .hero-text {
@@ -154,9 +149,7 @@ main.app-root {
   color: #bbf7d0;
 }
 
-/* =======================================================================
-   HERO — IMAGE SECTION
-======================================================================= */
+
 .hero-image {
   display: flex;
   align-items: center;
@@ -192,9 +185,7 @@ main.app-root {
   object-fit: cover;
 }
 
-/* =======================================================================
-   VIEW TOGGLE — MERGED
-======================================================================= */
+
 .view-toggle {
   margin-top: 18px;
   display: flex;
@@ -249,9 +240,9 @@ main.app-root {
 .app-view.active{
   display: block;
 }
-/* =======================================================================
-   STEP-GUIDE
-======================================================================= */
+
+
+
 .how-card {
   max-width: 1240px;
   margin: 18px auto 18px;
@@ -361,9 +352,7 @@ main.app-root {
 }
 
 
-/* =======================================================================
-   BASIC LAYOUT GRID
-======================================================================= */
+
 .main-area {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.2fr);
@@ -377,9 +366,8 @@ main.app-root {
   gap: 16px;
 }
 
-/* =======================================================================
-   PLOT CARD — BASE STRUCTURE
-======================================================================= */
+
+
 .plot-card {
   border-radius: var(--radius-card);
   padding: 16px 16px 18px;
@@ -417,10 +405,9 @@ main.app-root {
   border: 1px solid rgba(30, 64, 175, 0.8);
 }
 
-/* Continue in PART 2 → */
-/* =======================================================================
-   CHAT PANEL — MERGED & ENHANCED
-======================================================================= */
+
+
+
 .chat-panel {
   border-radius: var(--radius-card);
   padding: 16px 16px 14px;
@@ -447,7 +434,8 @@ main.app-root {
   color: var(--text-muted);
 }
 
-/* Summary badge in chat */
+
+
 .settings-summary {
   display: inline-flex;
   flex-wrap: wrap;
@@ -489,7 +477,7 @@ main.app-root {
   color: var(--text-muted);
 }
 
-/* Chat window */
+
 .chat-window {
   flex: 1;
   min-height: 220px;
@@ -611,7 +599,7 @@ main.app-root {
   transform: translateY(1px);
 }
 
-/* Uploaded image preview in chat */
+
 .image-message {
   display: inline-block;
   margin-bottom: 4px;
@@ -633,9 +621,8 @@ main.app-root {
   color: var(--text-muted);
 }
 
-/* =======================================================================
-   SIDE PANEL (KNN SETTINGS)
-======================================================================= */
+
+
 .side-panel {
   display: flex;
   flex-direction: column;
@@ -716,9 +703,8 @@ select option {
   color: var(--text-main);
 }
 
-/* =======================================================================
-   DATASET VIEW LAYOUT
-======================================================================= */
+
+
 .dataset-intro-card {
   border-radius: var(--radius-card);
   padding: 16px 16px 14px;
@@ -751,9 +737,8 @@ select option {
   min-height: 420px;
 }
 
-/* =======================================================================
-   DATASET TABLE
-======================================================================= */
+
+
 .table-wrap {
   border-radius: 16px;
   overflow: hidden;
@@ -792,7 +777,8 @@ select option {
   background: rgba(30, 64, 175, 0.4);
 }
 
-/* Thumbnail */
+
+
 .thumb-img {
   width: 40px;
   height: 40px;
@@ -801,9 +787,8 @@ select option {
   border: 1px solid rgba(148, 163, 184, 0.8);
 }
 
-/* =======================================================================
-   DISTANCE TABLE + NEAREST NEIGHBOUR HIGHLIGHT
-======================================================================= */
+
+
 .distance-table-wrap {
   margin-top: 10px;
   border-radius: 16px;
@@ -853,10 +838,9 @@ select option {
   border-left: 4px solid #facc15;
 }
 
-/* Continue in PART 3 → */
-/* =======================================================================
-   EXPLAINABILITY: DISTANCE CARD + PANELS
-======================================================================= */
+
+
+
 
 .distance-card {
   margin-top: 0.5rem;
@@ -894,7 +878,7 @@ select option {
   color: #ecfdf5;
 }
 
-/* Explanation panels */
+
 .distance-panel,
 .exp-panel {
   display: none;
@@ -923,9 +907,9 @@ select option {
   margin-bottom: 0.8rem;
 }
 
-/* =======================================================================
-   POINT DETAILS CARD
-======================================================================= */
+
+
+
 
 .point-details-image {
   display: block;
@@ -952,9 +936,8 @@ select option {
   margin: 3px 0;
 }
 
-/* =======================================================================
-   VOTE SUMMARY & BREAKDOWN
-======================================================================= */
+
+
 
 .vote-summary {
   margin-top: 8px;
@@ -977,9 +960,7 @@ select option {
   color: #fef3c7;
 }
 
-/* =======================================================================
-   SELECTED DATASET ROW
-======================================================================= */
+
 
 #dataset-table tbody tr.active {
   background: rgba(16, 185, 129, 0.35) !important;
@@ -990,9 +971,8 @@ select option {
   font-weight: 600;
 }
 
-/* =======================================================================
-   ADD / REMOVE BUTTONS
-======================================================================= */
+
+
 
 .btn-secondary {
   border-radius: 999px;
@@ -1014,9 +994,8 @@ select option {
   cursor: default;
 }
 
-/* =======================================================================
-   UPLOAD BOX (dataset upload)
-======================================================================= */
+
+
 .upload-area {
   margin-top: 8px;
   border-radius: 16px;
@@ -1035,9 +1014,9 @@ select option {
   color: var(--text-muted);
 }
 
-/* =======================================================================
-   RESPONSIVE IMPROVEMENTS
-======================================================================= */
+
+
+
 
 @media (max-width: 1024px) {
   .dataset-area {
@@ -1076,9 +1055,9 @@ select option {
   }
 }
 
-/* =======================================================================
-   FINAL POLISHING (visual consistency)
-======================================================================= */
+
+
+
 
 .plot {
   transition: box-shadow 0.2s ease;
@@ -1099,9 +1078,9 @@ select option {
 .data-table tbody tr:hover td {
   transition: background 0.15s ease;
 }
-/* ==========================================================
-   DEEP EXPLAINABILITY CARD
-========================================================== */
+
+
+
 .explainability-deep-card {
   margin-top: 20px;
   padding: 20px 22px;
@@ -1215,7 +1194,7 @@ select option {
   gap: 6px;
 }
 
-/* Tooltip */
+
 .tooltip {
   position: absolute;
   top: -32px;
@@ -1234,7 +1213,8 @@ select option {
   opacity: 1;
 }
 
-/* Bar */
+
+
 .confidence-bar {
   width: 100%;
   height: 14px;
@@ -1287,7 +1267,7 @@ select option {
 
 
 
-/* ===================== COMPARISON MODAL ===================== */
+
 body.modal-open {
   overflow: hidden;
 }
@@ -1473,9 +1453,8 @@ body.modal-open {
   opacity: 0.95;
 }
 
-/* =========================
-   MODEL CARD PAGE
-   ========================= */
+
+
 body.modelcard-page{
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -1657,7 +1636,6 @@ body.modelcard-page{
 
 
 
-/* ===================== CHAT HEADER ROW ===================== */
 .chat-header-row{
   display:flex;
   align-items:center;
@@ -1708,7 +1686,8 @@ body.modelcard-page{
   transform: translateY(-1px);
 }
 
-/* ===================== COLLAPSIBLE SETTINGS PANEL ===================== */
+
+
 .main-area{
   --settings-col: minmax(320px, 420px);
   grid-template-columns: minmax(0, 1fr) var(--settings-col);
@@ -1933,7 +1912,8 @@ body.modelcard-page{
   background: rgba(2,6,23,0.28);
 }
 
-/* New: nicer typography for longer explanations */
+
+
 .param-help{
   margin: 10px 0 0;
   font-size: 0.88rem;
@@ -2012,7 +1992,7 @@ body.modelcard-page{
 .dataset-buttons{
   display: flex;
   align-items: center;
-  flex-wrap: wrap; /* optional */
+  flex-wrap: wrap; 
 }
 
 .dataset-buttons > * + *{
