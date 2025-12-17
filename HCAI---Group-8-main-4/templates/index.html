@@ -114,7 +114,7 @@
         <div class="how-step-detail" aria-live="polite">
           <h3 id="how-step-title"> · Model memory</h3>
           <p id="how-step-text">
-            FlowerLens starts with a small training dataset of labelled flower images.
+            FlowerLens starts with a training dataset of labelled flower images.
             This is the model’s memory. You can explore it in the
             <a href="#view-dataset">training data &amp; explanation view</a>.
           </p>
@@ -789,26 +789,7 @@
 
   <script>
 
-    const datasetPoints = [
-      { id: 1, label: 'iris setosa', x: 1.2, y: 0.8, source: 'Original dataset', inTraining: true, image: 'static/images/iris_setosa.jpg',
-        features: { sepal_length: 5.1, sepal_width: 3.5, petal_length: 1.4, petal_width: 0.2 } },
-      { id: 2, label: 'alcea setosa', x: 1.4, y: 1.0, source: 'Original dataset', inTraining: true, image: 'static/images/alcea_setosa.jpg',
-        features: { sepal_length: 4.9, sepal_width: 3.0, petal_length: 1.4, petal_width: 0.2 } },
-      { id: 3, label: 'echeveria setosa', x: 1.0, y: 0.9, source: 'Original dataset', inTraining: true, image: 'static/images/echeveria_setosa.jpg',
-        features: { sepal_length: 4.7, sepal_width: 3.2, petal_length: 1.3, petal_width: 0.2 } },
-      { id: 4, label: 'oxalis versicolor', x: 3.1, y: 2.2, source: 'Original dataset', inTraining: true, image: 'static/images/oxalis_versicolor.jpg',
-        features: { sepal_length: 6.2, sepal_width: 2.8, petal_length: 4.8, petal_width: 1.8 } },
-      { id: 5, label: 'sumpfiris iris versicolor', x: 2.9, y: 2.0, source: 'Original dataset', inTraining: true, image: 'static/images/sumpfiris_iris_versicolor.jpg',
-        features: { sepal_length: 6.0, sepal_width: 2.7, petal_length: 4.5, petal_width: 1.5 } },
-      { id: 6, label: 'clematis versicolor', x: 3.3, y: 2.4, source: 'Original dataset', inTraining: true, image: 'static/images/clematis_versicolor.jpg',
-        features: { sepal_length: 5.9, sepal_width: 2.9, petal_length: 4.2, petal_width: 1.5 } },
-      { id: 7, label: 'iris virginica', x: 4.0, y: 3.1, source: 'Original dataset', inTraining: true, image: 'static/images/iris_virginica.jpg',
-        features: { sepal_length: 7.2, sepal_width: 3.0, petal_length: 6.0, petal_width: 2.0 } },
-      { id: 8, label: 'mertensia virginica', x: 4.3, y: 3.4, source: 'Original dataset', inTraining: true, image: 'static/images/mertensia_virginica.jpg',
-        features: { sepal_length: 6.5, sepal_width: 3.0, petal_length: 5.5, petal_width: 2.1 } },
-      { id: 9, label: 'itea virginica', x: 3.8, y: 2.9, source: 'Original dataset', inTraining: true, image: 'static/images/itea_virginica.jpg',
-        features: { sepal_length: 6.7, sepal_width: 3.1, petal_length: 5.6, petal_width: 2.4 } }
-    ];
+    const datasetPoints = [];
 
     function colorForLabel(label) {
       const l = label.toLowerCase();
@@ -1655,27 +1636,46 @@ function syncComparisonIfOpen() {
 
         if (data.prediction && data.class) {
           const emoji =
-            data.class === 'Setosa' ? '🌸' :
-            data.class === 'Versicolor' ? '🌸' :
-            data.class === 'Virginica' ? '🌼' : '🌻';
-
+          data.class === 'Setosa' ? '🌸' :
+          data.class === 'Versicolor' ? '🌸' :
+          data.class === 'Virginica' ? '🌼' : '🌻';
           const summaryHtml = data.summary
-            ? data.summary.split('\n').map(line => escapeHtml(line)).join('<br>')
+          ? data.summary.split('\n').map(line => escapeHtml(line)).join('<br>')
+          : '';
+          let conf = null;
+          if (data.coords) {
+            setQueryPointFromBackend(
+              data.coords,
+              { className: data.class, image: pendingImageDataUrl }
+            );
+            const v = voteForSettings(queryPoint, getMainSettings());
+            if (v && typeof v.confidence === 'number') conf = v.confidence;
+          }
+          const confHtml = (typeof conf === 'number')
+          ? `<div style="margin-top:8px;">
+            <strong>Confidence:</strong>
+            <a href="#vote-summary" data-jump="vote-summary" class="chat-confidence-link">${conf}%</a>
+            </div>`
             : '';
+            addChatMessage(
+              `
+              <div>
+                <div>${escapeHtml(data.prediction)}</div>
+                <br>
+                <div><strong>${emoji} ${escapeHtml(data.class)}</strong></div>
+                <div>${summaryHtml}</div>
+                ${confHtml}
+                </div>
+                `,
+                'bot',
+                true
+              );
+            }
 
-          addChatMessage(
-            `
-            <div>
-              <div>${escapeHtml(data.prediction)}</div>
-              <br>
-              <div><strong>${emoji} ${escapeHtml(data.class)}</strong></div>
-              <div>${summaryHtml}</div>
-            </div>
-            `,
-            'bot',
-            true
-          );
-        }
+
+
+
+
 
         if (typeof data.similarity === 'number') {
           similarityText.textContent = `Similarity to closest flower: ${data.similarity}%`;
@@ -1728,15 +1728,6 @@ function syncComparisonIfOpen() {
         pendingImageFile = null;
         fileInput.value = '';
 
-        if (predictionData?.coords) {
-          setQueryPointFromBackend(
-            predictionData.coords,
-            {
-              className: predictionData.class,
-              image: pendingImageDataUrl
-            }
-          );
-        }
 
         if (predictionData?.original_image) {
           document.getElementById('explainOriginalImage').src =
@@ -1822,6 +1813,143 @@ function syncComparisonIfOpen() {
     const pointDetailsDiv = document.getElementById('point-details');
 
     let selectedRowId = null;
+
+
+
+
+
+  function mapBackendPointToUi(p) {
+  return {
+    id: Number(p.id),
+    label: p.label,
+    x: Number(p.x),
+    y: Number(p.y),
+    source: p.source || 'Training data',
+    inTraining: p.inTraining !== false,
+    image: p.image || ''
+  };
+}
+
+async function refreshDatasetFromBackend(selectId = null) {
+  const res = await fetch('/api/dataset');
+  const data = await res.json();
+  if (!res.ok || !Array.isArray(data.dataset)) return;
+
+  datasetPoints.splice(0, datasetPoints.length, ...data.dataset.map(mapBackendPointToUi));
+  renderDatasetTable();
+  initScatterPlot();
+
+  if (selectId != null) {
+    selectDatasetRow(selectId);
+    const p = datasetPoints.find(pp => pp.id === selectId);
+    if (p) showPointDetails(p);
+  }
+}
+
+
+
+addBtn.addEventListener('click', () => datasetFileInput.click());
+
+datasetFileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const defaultLabel = (file.name || 'new flower').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+  const label = (prompt('Enter a flower label:', defaultLabel) || '').trim();
+
+  if (!label) {
+    alert('Please enter a label.');
+    e.target.value = '';
+    return;
+  }
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('label', label);
+
+  try {
+    const res = await fetch('/api/dataset/add', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || 'Upload failed');
+      e.target.value = '';
+      return;
+    }
+
+    if (Array.isArray(data.dataset)) {
+      datasetPoints.splice(0, datasetPoints.length, ...data.dataset.map(mapBackendPointToUi));
+      renderDatasetTable();
+      initScatterPlot();
+
+      const addedId = data.added && data.added.id != null ? Number(data.added.id) : null;
+      if (addedId != null) {
+        selectDatasetRow(addedId);
+        const p = datasetPoints.find(pp => pp.id === addedId);
+        if (p) showPointDetails(p);
+      }
+    }
+  } catch (err) {
+    alert('Upload failed');
+  }
+
+  e.target.value = '';
+});
+
+
+
+
+
+
+
+
+
+removeBtn.addEventListener('click', async () => {
+  if (selectedRowId == null) return;
+
+  if (selectedRowId === CHAT_UPLOAD_ID) {
+    chatUploadEntry = null;
+    queryPoint = null;
+    selectedRowId = null;
+    removeBtn.disabled = true;
+    removeBtn.textContent = 'Remove selected image';
+    pointDetailsDiv.innerHTML = '<p>No point selected yet. Click a dot or row.</p>';
+    renderDatasetTable();
+    initScatterPlot();
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/dataset/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: selectedRowId })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || 'Remove failed');
+      return;
+    }
+
+    if (Array.isArray(data.dataset)) {
+      datasetPoints.splice(0, datasetPoints.length, ...data.dataset.map(mapBackendPointToUi));
+      selectedRowId = null;
+      removeBtn.disabled = true;
+      renderDatasetTable();
+      initScatterPlot();
+      pointDetailsDiv.innerHTML = '<p>Point removed.</p>';
+    }
+  } catch (err) {
+    alert('Remove failed');
+  }
+});
+
+
+
+
+
     
     function renderDatasetTable() {
       const filter = (classFilter?.value || 'all').toLowerCase();
@@ -1855,77 +1983,6 @@ function syncComparisonIfOpen() {
     classFilter?.addEventListener('change', renderDatasetTable);
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    addBtn.addEventListener('click', () => datasetFileInput.click());
-    datasetFileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const newId = Math.max(...datasetPoints.map((p) => p.id)) + 1;
-        const label = prompt('Enter a class for this flower:', 'new_flower') || 'new_flower';
-        const avgX = datasetPoints.reduce((s, p) => s + p.x, 0) / datasetPoints.length;
-        const avgY = datasetPoints.reduce((s, p) => s + p.y, 0) / datasetPoints.length;
-        const jitterX = (Math.random() - 0.5) * 0.7;
-        const jitterY = (Math.random() - 0.5) * 0.7;
-        datasetPoints.push({
-          id: newId,
-          label,
-          x: avgX + jitterX,
-          y: avgY + jitterY,
-          source: 'User upload',
-          inTraining: true,
-          image: ev.target.result,
-          features: { sepal_length: 0, sepal_width: 0, petal_length: 0, petal_width: 0 }
-        });
-        renderDatasetTable();
-        initScatterPlot();
-        selectDatasetRow(newId);
-        showPointDetails(datasetPoints[datasetPoints.length - 1]);
-      };
-      reader.readAsDataURL(file);
-      e.target.value = '';
-    });
-
-    removeBtn.addEventListener('click', () => {
-      if (selectedRowId == null) return;
-      if (selectedRowId === CHAT_UPLOAD_ID) {
-        chatUploadEntry = null;
-        queryPoint = null;
-        selectedRowId = null;
-        removeBtn.disabled = true;
-        removeBtn.textContent = 'Remove selected image';
-        pointDetailsDiv.innerHTML = '<p>No point selected yet. Click a dot or row.</p>';
-        renderDatasetTable();
-        initScatterPlot();
-        return;
-      }
-      
-      const idx = datasetPoints.findIndex((p) => p.id === selectedRowId);
-      if (idx < 0) return;
-      datasetPoints.splice(idx, 1);
-      selectedRowId = null;
-      removeBtn.disabled = true;
-      renderDatasetTable();
-      initScatterPlot();
-      pointDetailsDiv.innerHTML = '<p>Point removed.</p>';
-    });
 
     function selectDatasetRow(id) {
       selectedRowId = id;
@@ -2382,12 +2439,12 @@ function attachScatterResizeObserver() {
       }
     });
 
-    renderDatasetTable();
-    updateSettingsSummary();
-    window.addEventListener('load', () => {
-      initScatterPlot();
+    window.addEventListener('load', async () => {
+      await refreshDatasetFromBackend();
       setTimeout(() => resizeScatterSoon(), 150);
     });
+
+
 
   </script>
 </body>

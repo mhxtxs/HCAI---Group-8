@@ -9,6 +9,13 @@ from PIL import Image
 from sklearn.decomposition import PCA
 import base64
 import cv2
+import uuid
+from werkzeug.utils import secure_filename
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.preprocessing import StandardScaler
+
+
+
 
 
 app = Flask(
@@ -24,6 +31,10 @@ HEATMAP_DIR = "static/heatmaps"
 
 os.makedirs(IMAGE_DIR, exist_ok=True)
 os.makedirs(HEATMAP_DIR, exist_ok=True)
+
+PUBLIC_IMAGE_DIR = os.path.join(app.static_folder, "training_images")
+os.makedirs(PUBLIC_IMAGE_DIR, exist_ok=True)
+
 
 
 DEFAULT_DATASET = [
@@ -110,7 +121,6 @@ ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 
 def _iter_training_image_paths():
     candidate_dirs = [
-        os.path.join(app.static_folder, "images"),
         IMAGE_DIR,
     ]
     seen = set()
@@ -270,6 +280,41 @@ def generate_heatmap(img_bytes):
 
     return "/static/heatmaps/last_heatmap.jpg"
 
+def fit_projector(dataset):
+    feats = np.asarray([p.get("features", []) for p in dataset], dtype=float)
+    if len(dataset) < 2:
+        return None, np.zeros((len(dataset), 2), dtype=float)
+
+    y = [base_class(p.get("label", "")) for p in dataset]
+    classes = sorted(set(y))
+
+    if len(classes) >= 2 and len(dataset) >= 3:
+        scaler = StandardScaler()
+        Xs = scaler.fit_transform(feats)
+        lda = LinearDiscriminantAnalysis(n_components=2)
+        coords = lda.fit_transform(Xs, y)
+        return ("lda", scaler, lda), coords
+
+    pca = PCA(n_components=2)
+    coords = pca.fit_transform(feats)
+    return ("pca", None, pca), coords
+
+
+def project_query(projector, query_features):
+    if projector is None:
+        return [0.0, 0.0]
+
+    kind, scaler, model = projector
+    q = np.asarray(query_features, dtype=float).reshape(1, -1)
+
+    if kind == "lda":
+        q = scaler.transform(q)
+        return model.transform(q)[0].tolist()
+
+    return model.transform(q)[0].tolist()
+
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -296,20 +341,16 @@ def predict():
     features = image_to_features(io.BytesIO(img_bytes))
     if features is None:
         return jsonify({"error": "Invalid image"}), 400
-
+    
     dataset = load_dataset()
-    data_feats = np.array([p["features"] for p in dataset])
-    all_feats = np.vstack([data_feats, features])
-
-    # PCA → 2D COORDS
-    pca = PCA(n_components=2)
-    coords = pca.fit_transform(all_feats)
-
-    # UPDATE TRAINING COORDS
-    for p, c in zip(dataset, coords[:-1]):
+    projector, coords = fit_projector(dataset)
+    for p, c in zip(dataset, coords):
         p["coords"] = c.tolist()
+        query_coords = project_query(projector, features)
 
-    query_coords = coords[-1].tolist()
+    
+
+
 
     # READ FRONTEND PARAMETERS (optional, but wired)
     k = int(request.form.get("k", 5))
@@ -317,10 +358,11 @@ def predict():
     mink_p = float(request.form.get("p", 2))
 
     # --- SIMILARITY CALCULATION ---
+
     distances = [
-        compute_distance(query_coords, p["coords"], metric, mink_p)
+        compute_distance(features, p["features"], metric, mink_p)
         for p in dataset
-    ]
+        ]
     closest_d = min(distances)
     similarity_score = max(0, 1 - (closest_d / (closest_d + 1))) * 100
     similarity_score = round(similarity_score, 2)
@@ -369,6 +411,145 @@ def chat():
     return jsonify({
         "reply": "You can ask me about how KNN works or about Setosa, Versicolor, or Virginica."
     })
+
+
+def _next_dataset_id(dataset):
+    ids = []
+    for p in dataset:
+        try:
+            ids.append(int(p.get("id")))
+        except:
+            pass
+    return (max(ids) if ids else 0) + 1
+
+def _fit_pca_on_dataset(dataset):
+    feats = np.asarray([p.get("features", []) for p in dataset], dtype=float) if dataset else np.zeros((0, 4))
+    if len(dataset) < 2:
+        return None, np.zeros((len(dataset), 2), dtype=float)
+    pca = PCA(n_components=2)
+    coords = pca.fit_transform(feats)
+    return pca, coords
+
+
+
+
+def _dataset_points_for_frontend(dataset):
+    projector, coords = fit_projector(dataset)
+
+    out = []
+    for p, c in zip(dataset, coords):
+        pid = p.get("id")
+        try:
+            pid_num = int(pid)
+        except:
+            pid_num = pid
+
+        out.append({
+            "id": pid_num,
+            "label": p.get("label", ""),
+            "x": float(c[0]),
+            "y": float(c[1]),
+            "source": p.get("source", "Training data"),
+            "inTraining": True,
+            "image": p.get("image", "")
+        })
+    return out
+
+
+
+
+
+
+@app.route("/api/dataset", methods=["GET"])
+def api_dataset():
+    dataset = load_dataset()
+    return jsonify({"dataset": _dataset_points_for_frontend(dataset)})
+
+@app.route("/api/dataset/add", methods=["POST"])
+def api_dataset_add():
+    if "file" not in request.files:
+        return jsonify({"error": "Missing file"}), 400
+
+    file = request.files["file"]
+    img_bytes = file.read()
+    if not img_bytes:
+        return jsonify({"error": "Empty file"}), 400
+
+    label = (request.form.get("label") or "").strip()
+    if not label:
+        label = os.path.splitext(file.filename or "user_upload")[0].replace("_", " ").strip()
+
+    if base_class(label) == "Unknown":
+        return jsonify({"error": "Label must include setosa, versicolor, or virginica."}), 400
+
+    feats = image_to_features(io.BytesIO(img_bytes))
+    if feats is None:
+        return jsonify({"error": "Invalid image"}), 400
+
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
+        ext = ".jpg"
+
+    safe_label = secure_filename(label.replace(" ", "_").lower()) or "user_upload"
+    filename = f"{safe_label}_{uuid.uuid4().hex}{ext}"
+    save_path = os.path.join(PUBLIC_IMAGE_DIR, filename)
+    with open(save_path, "wb") as f:
+        f.write(img_bytes)
+
+    image_url = f"/static/training_images/{filename}"
+
+    dataset = load_dataset()
+    new_id = _next_dataset_id(dataset)
+
+    dataset.append({
+        "id": str(new_id),
+        "label": label,
+        "image": image_url,
+        "features": feats.tolist(),
+        "coords": [0.0, 0.0]
+    })
+
+    save_dataset(dataset)
+
+    return jsonify({
+        "added": {"id": new_id, "label": label, "image": image_url},
+        "dataset": _dataset_points_for_frontend(dataset)
+    })
+
+@app.route("/api/dataset/remove", methods=["POST"])
+def api_dataset_remove():
+    payload = request.get_json() or {}
+    rid = payload.get("id")
+    if rid is None:
+        return jsonify({"error": "Missing id"}), 400
+
+    dataset = load_dataset()
+    rid_str = str(rid)
+
+    removed = None
+    new_ds = []
+    for p in dataset:
+        if str(p.get("id")) == rid_str and removed is None:
+            removed = p
+        else:
+            new_ds.append(p)
+
+    if removed is None:
+        return jsonify({"error": "Not found"}), 404
+
+    img = removed.get("image", "")
+    if isinstance(img, str) and img.startswith("/static/training_images/"):
+        fn = img.split("/static/training_images/", 1)[1]
+        fp = os.path.join(PUBLIC_IMAGE_DIR, fn)
+        if os.path.isfile(fp):
+            try:
+                os.remove(fp)
+            except:
+                pass
+
+    save_dataset(new_ds)
+    return jsonify({"removed": rid, "dataset": _dataset_points_for_frontend(new_ds)})
+
 
 
 if __name__ == "__main__":
