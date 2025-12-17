@@ -1986,3 +1986,36 @@ body.modelcard-page{
 
 
 
+.compare-controls label,
+.filter-group label{
+  font-size: 0.9rem;
+  font-weight: 750;
+  color: rgba(226,232,240,0.95);
+}
+
+
+.filter-group{
+  width: 100%;
+}
+
+.filter-group .select{
+  width: 100%;
+}
+
+
+
+.dataset-buttons{
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap; /* optional */
+}
+
+.dataset-buttons > * + *{
+  margin-left: 14px;
+}
+
+
+
+
+
+

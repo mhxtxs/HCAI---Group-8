@@ -190,7 +190,7 @@
 
         <div class="result-actions">
           <button class="btn-secondary btn-small" type="button" data-jump="feature-space">
-            Show neighbours
+            Show similar flowers
           </button>
           <button class="btn-secondary btn-small" type="button" data-jump="heatmap-explainer-card">
             Why this result?
@@ -350,10 +350,6 @@
           <li>Add or remove images to understand how the model adapts.</li>
           <li>Changing k or the distance metric changes the nearest neighbours.</li>
         </ul>
-
-        <p class="param-note">
-          Think of this as the model’s <strong>memory</strong>.
-        </p>
       </section>
 
       <!-- ========================= DATASET & PLOT ========================== -->
@@ -386,14 +382,17 @@
           
           <div class="dataset-controls">
             <div class="filter-group">
-              <label for="class-filter">Filter by class:</label>
-              <select id="class-filter">
-                <option value="all">All classes</option>
-                <option value="setosa">Setosa</option>
-                <option value="versicolor">Versicolor</option>
-                <option value="virginica">Virginica</option>
-              </select>
+              <label for="class-filter" class="setting-label">Filter by class:</label>
+              <div class="select-wrap">
+                <select id="class-filter" class="select">
+                  <option value="all">All classes</option>
+                  <option value="setosa">Setosa</option>
+                  <option value="versicolor">Versicolor</option>
+                  <option value="virginica">Virginica</option>
+                </select>
+              </div>
             </div>
+
 
 
 
@@ -689,11 +688,17 @@
           </div>
           <div class="param-group">
             <label for="compare-main-metric">Distance metric</label>
-            <select id="compare-main-metric">
-              <option value="euclidean">Euclidean distance</option>
-              <option value="manhattan">Manhattan distance</option>
-              <option value="minkowski">Minkowski distance (p-th order)</option>
-            </select>
+
+            <div class="select-wrap">
+              <select id="compare-main-metric" class="select">
+                <option value="euclidean">Euclidean distance</option>
+                <option value="manhattan">Manhattan distance</option>
+                <option value="minkowski">Minkowski distance (p-th order)</option>
+              </select>
+            </div>
+
+
+
             <p id="compare-main-metric-description" class="param-help">
               Euclidean distance measures straight-line distance like with a ruler.
             </p>
@@ -739,11 +744,16 @@
 
           <div class="param-group">
             <label for="compare-metric">Distance metric</label>
-            <select id="compare-metric">
-              <option value="euclidean">Euclidean distance</option>
-              <option value="manhattan">Manhattan distance</option>
-              <option value="minkowski">Minkowski distance (p-th order)</option>
-            </select>
+
+            <div class="select-wrap">
+              <select id="compare-metric" class="select">
+                <option value="euclidean">Euclidean distance</option>
+                <option value="manhattan">Manhattan distance</option>
+                <option value="minkowski">Minkowski distance (p-th order)</option>
+              </select>
+            </div>
+
+
             <p id="compare-metric-description" class="param-help">
               Euclidean distance measures straight-line distance like with a ruler.
             </p>
