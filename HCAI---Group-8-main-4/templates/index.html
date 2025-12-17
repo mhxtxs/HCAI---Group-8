@@ -2338,29 +2338,34 @@ function attachScatterResizeObserver() {
         glow: 'distance-explanation'
       },
       5: {
-         title: '5 · Nearest neighbours',
-          html:
-          'The <strong>k</strong> closest points become the neighbours. In the scatter plot, they are highlighted with a gold ring. ' +
-          '<a href="#feature-space">View the highlighted neighbours in the scatter plot</a>.',
-          scrollTo: 'feature-space',
-          glow: 'feature-space'
-        },
-        6: {
-          title: '6 · Neighbour vote',
-          html:
-          'Only the <strong>k</strong> neighbours vote. The class with the most votes becomes the prediction, and confidence depends on how dominant the winner is. ' +
-          '<a href="#vote-summary">Jump to the vote summary</a>.',
-          scrollTo: 'vote-summary',
-          glow: 'vote-summary'
-        },
-        7: {
-          title: '7 · Explanation',
-          html:
-          'All panels work together: the chat explains the prediction in words, the dataset view shows the model’s memory, and the distances + vote show why the result happens. ' +
-          '<a href="#heatmap-explainer-card">View the visual explanation</a>.',
-          scrollTo: 'heatmap-explainer-card',
-          glow: 'heatmap-explainer-card'
-        }
+        title: '5 · Nearest neighbours',
+        html:
+        'The <strong>k</strong> most similar training flowers to your uploaded image are selected. ' +
+        'In the scatter plot, they are <strong>marked with a gold ring</strong>. ' +
+        '<a href="#feature-space">Jump to the plot</a>.',
+        scrollTo: 'feature-space',
+        glow: 'feature-space'
+      },
+      6: {
+        title: '6 · Neighbour vote',
+        html:
+        'Only these <strong>k</strong> most similar flowers are counted. ' +
+        'The <strong>most common class</strong> becomes the result. ' +
+        'The <strong>clearer the majority</strong>, the <strong>more confident</strong> the prediction.',
+        scrollTo: 'vote-summary',
+        glow: 'vote-summary'
+      },
+      7: {
+        title: '7 · Explanation',
+        html:
+        'All panels work together: the chat explains the prediction in words, the dataset view shows the model’s memory, ' +
+        'and the distances + vote show why the result happens. ' +
+        '<a href="#heatmap-explainer-card">View the visual explanation</a>. ' +
+        'For details and limitations, see the <a href="{{ url_for("model_card") }}">model card</a>.',
+        scrollTo: 'heatmap-explainer-card',
+        glow: 'heatmap-explainer-card'
+      }
+
       };
 
 
